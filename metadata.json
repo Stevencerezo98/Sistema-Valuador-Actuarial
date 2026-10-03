@@ -1,0 +1,8 @@
+{
+  "name": "Sistema Valuador Actuarial",
+  "description": "Calculadora y motor actuarial de provisiones NIC 19 según el Código del Trabajo del Ecuador (Desahucio Art. 185 y Jubilación Patronal Art. 216)",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
