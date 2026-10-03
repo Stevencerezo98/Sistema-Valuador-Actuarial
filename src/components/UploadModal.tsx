@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { EmpleadoInput } from '../types/actuarial';
 import { leerArchivoNomina, descargarPlantillaOficial, parsearTextoPegado } from '../services/actuarialEngine';
+import { EJEMPLO_USUARIO_DATA } from '../data/sampleCensus';
 import { 
   X, 
   Upload, 

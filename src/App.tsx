@@ -15,7 +15,7 @@ import { UploadModal } from './components/UploadModal';
 import { MacroVariablesModal } from './components/MacroVariablesModal';
 import { CompanyConfigModal } from './components/CompanyConfigModal';
 
-import { EmpleadoInput, EmpleadoProcesado, VariablesMacro, DatosEmpresaEstudio, DEFAULT_EMPRESA_CAJAMARCA } from './types/actuarial';
+import { EmpleadoInput, EmpleadoProcesado, VariablesMacro, DatosEmpresaEstudio, DEFAULT_EMPRESA_CAJAMARCA, RolUsuario } from './types/actuarial';
 import { DEFAULT_VARIABLES_MACRO, procesarMotorActuarial, calcularSensibilidadNIIF } from './services/actuarialEngine';
 import { generarEstudioWord } from './services/wordReportGenerator';
 import { generarEstudioCompletoPDF } from './services/cajamarcaPdfReportGenerator';
@@ -23,6 +23,7 @@ import { generarEstudioCompletoPDF } from './services/cajamarcaPdfReportGenerato
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
+  const [rolActual, setRolActual] = useState<RolUsuario>('admin');
   
   // DATOS INICIALES VACÍOS: Se eliminaron los datos de prueba a solicitud del usuario
   const [censusInput, setCensusInput] = useState<EmpleadoInput[]>([]);
@@ -84,6 +85,8 @@ export default function App() {
         isOpen={sidebarOpen}
         onCloseMobile={() => setSidebarOpen(false)}
         numEmpleados={censusInput.length}
+        rolActual={rolActual}
+        nombreEmpresa={empresa.nombre_empresa}
       />
 
       {/* Main Content Wrapper (AdminLTE content-wrapper) */}
@@ -106,6 +109,9 @@ export default function App() {
           hasData={censusInput.length > 0}
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
+          rolActual={rolActual}
+          onCambiarRol={setRolActual}
+          empresa={empresa}
         />
 
         {/* AdminLTE Content Header (Breadcrumbs & Page Title) */}

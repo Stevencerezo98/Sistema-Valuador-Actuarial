@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { 
   Calculator, 
   FileCode2, 
@@ -11,7 +11,6 @@ import {
   Briefcase,
   Shield
 } from 'lucide-react';
-import React, { useMemo } from 'react';
 import { VariablesMacro, RolUsuario } from '../types/actuarial';
 
 interface SidebarProps {
