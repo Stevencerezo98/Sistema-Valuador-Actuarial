@@ -85,7 +85,7 @@ export const MortalityTablesView: React.FC = () => {
             <strong>SÍ, SON LAS TABLAS OFICIALES DE REFERENCIA EN ECUADOR.</strong> Para la valuación actuarial de 
             <strong> Jubilación Patronal (Art. 216) y Bonificación por Desahucio (Art. 185)</strong> bajo el Código del Trabajo y la norma 
             <strong> NIC 19 (IAS 19)</strong>, los peritos actuarios calificados por la Superintendencia de Compañías (SCVS) 
-            y la Superintendencia de Bancos (como se evidencia en el estudio de <em>Cajamarca Protective Services</em> de abril de 2024) 
+            y la Superintendencia de Bancos
             aplican las <strong>Tablas de Mortalidad General IESS 2000 publicadas en el Registro Oficial No. 650 del 28 de agosto del 2002</strong>, 
             elaboradas por Logaritmo Cía. Ltda., junto con los coeficientes del <strong>artículo 218 del Código del Trabajo</strong>.
           </p>

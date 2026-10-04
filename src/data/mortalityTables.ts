@@ -129,9 +129,7 @@ export const DICTAMEN_VIGENCIA_TABLAS = {
     3. Resolución No. 07-2021 de la Corte Nacional de Justicia: Establece como jurisprudencia obligatoria 
        la aplicación de los topes sobre la remuneración media y ratifica la vigencia del marco de 
        cálculo actuarial legal.
-    4. Práctica de los Peritos Actuarios Calificados (SCVS y SB): Como se constata en el informe oficial 
-       de CAJAMARCA PROTECTIVE SERVICES (elaborado por Econ. Hugo Paredes Estrella, Reg. 1-014 SCVS en 
-       abril 2024), los actuarios calificados en Ecuador aplican estas tablas combinadas con la tabla de 
-       activos del IESS 1995/2000 para el cómputo de la reserva matemática.
+    4. Práctica de los Peritos Actuarios Calificados (SCVS y SB): Los actuarios calificados en Ecuador aplican estas tablas combinadas con la tabla de 
+       activos del IESS 1995/2000 para el cómputo de la reserva matemática y provisiones NIC 19.
   `
 };

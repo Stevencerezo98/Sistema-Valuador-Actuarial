@@ -3,7 +3,7 @@ import { EmpleadoProcesado, ResumenMotor, VariablesMacro, DatosEmpresaEstudio } 
 
 /**
  * Generador del Estudio Actuarial Completo en Formato PDF
- * Reproduce la estructura, capítulos, tablas, anexos y dictamen del informe formal de CAJAMARCA PROTECTIVE SERVICES
+ * Reproduce la estructura formal pericial, capítulos, tablas, anexos y dictamen actuarial ecuatoriano
  */
 export function generarEstudioCompletoPDF(
   resultados: EmpleadoProcesado[],

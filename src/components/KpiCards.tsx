@@ -3,10 +3,11 @@ import { ResumenMotor, VariablesMacro } from '../types/actuarial';
 import { 
   DollarSign, 
   Users, 
-  Award, 
   Layers, 
-  ArrowRight,
-  TrendingUp
+  Award,
+  TrendingUp,
+  Percent,
+  Activity
 } from 'lucide-react';
 
 interface KpiCardsProps {
@@ -27,91 +28,97 @@ export const KpiCards: React.FC<KpiCardsProps> = ({ resumen, variables }) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       
-      {/* 1. Small Box Blue (Primary): VPO Total / DBO */}
-      <div className="bg-blue-600 text-white rounded shadow-sm overflow-hidden relative flex flex-col justify-between">
-        <div className="p-4 relative z-10">
-          <div className="text-2xl font-bold font-mono tracking-tight">
-            {formatCurrency(resumen.vpo_total)}
+      {/* 1. VPO Total / DBO Consolidado */}
+      <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs hover:shadow-md transition-all relative overflow-hidden group">
+        <div className="flex items-start justify-between">
+          <div>
+            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+              Obligación Total DBO (NIC 19)
+            </span>
+            <div className="text-2xl font-bold font-mono tracking-tight text-slate-900 mt-2">
+              {formatCurrency(resumen.vpo_total)}
+            </div>
           </div>
-          <p className="text-xs uppercase font-semibold text-blue-100 mt-1">
-            Obligación Total DBO (NIC 19)
-          </p>
-          <span className="text-[10px] text-blue-200 block mt-0.5">
-            Pasivo consolidado de balance general
-          </span>
+          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
+            <DollarSign className="w-5 h-5" />
+          </div>
         </div>
-        <div className="absolute right-3 top-3 text-blue-400/30 z-0">
-          <DollarSign className="w-16 h-16" />
-        </div>
-        <div className="bg-black/15 py-1 px-4 text-[11px] font-medium text-white/90 flex items-center justify-between">
-          <span>Desahucio + Jubilación</span>
-          <ArrowRight className="w-3.5 h-3.5" />
+
+        <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <span>Pasivo de Balance General</span>
+          <span className="font-semibold text-blue-600">Desahucio + Jubilación</span>
         </div>
       </div>
 
-      {/* 2. Small Box Green (Success): VPO Desahucio Art. 185 */}
-      <div className="bg-green-600 text-white rounded shadow-sm overflow-hidden relative flex flex-col justify-between">
-        <div className="p-4 relative z-10">
-          <div className="text-2xl font-bold font-mono tracking-tight">
-            {formatCurrency(resumen.vpo_desahucio_total)}
+      {/* 2. VPO Desahucio (Art. 185) */}
+      <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs hover:shadow-md transition-all relative overflow-hidden group">
+        <div className="flex items-start justify-between">
+          <div>
+            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+              VPO Desahucio (Art. 185)
+            </span>
+            <div className="text-2xl font-bold font-mono tracking-tight text-slate-900 mt-2">
+              {formatCurrency(resumen.vpo_desahucio_total)}
+            </div>
           </div>
-          <p className="text-xs uppercase font-semibold text-green-100 mt-1">
-            VPO Desahucio (Art. 185)
-          </p>
-          <span className="text-[10px] text-green-200 block mt-0.5">
-            25% sueldo proyectado por servicio al retiro
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
+            <Layers className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <span>25% sueldo por servicio</span>
+          <span className="font-semibold text-emerald-600 font-mono">
+            {((resumen.vpo_desahucio_total / (resumen.vpo_total || 1)) * 100).toFixed(1)}% del DBO
           </span>
-        </div>
-        <div className="absolute right-3 top-3 text-green-400/30 z-0">
-          <Layers className="w-16 h-16" />
-        </div>
-        <div className="bg-black/15 py-1 px-4 text-[11px] font-medium text-white/90 flex items-center justify-between">
-          <span>Factor permanencia (1-r)ᵗ</span>
-          <ArrowRight className="w-3.5 h-3.5" />
         </div>
       </div>
 
-      {/* 3. Small Box Yellow/Orange (Warning): VPO Jubilación Patronal Art. 216 */}
-      <div className="bg-amber-500 text-white rounded shadow-sm overflow-hidden relative flex flex-col justify-between">
-        <div className="p-4 relative z-10">
-          <div className="text-2xl font-bold font-mono tracking-tight">
-            {formatCurrency(resumen.vpo_jubilacion_total)}
+      {/* 3. VPO Jubilación Patronal (Art. 216) */}
+      <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs hover:shadow-md transition-all relative overflow-hidden group">
+        <div className="flex items-start justify-between">
+          <div>
+            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+              VPO Jubilación (Art. 216)
+            </span>
+            <div className="text-2xl font-bold font-mono tracking-tight text-slate-900 mt-2">
+              {formatCurrency(resumen.vpo_jubilacion_total)}
+            </div>
           </div>
-          <p className="text-xs uppercase font-semibold text-amber-100 mt-1">
-            VPO Jubilación Patronal (Art. 216)
-          </p>
-          <span className="text-[10px] text-amber-100 block mt-0.5">
-            Topes 0.5 - 1.0 SBU (${variables.sbu_vigente * 0.5} a ${variables.sbu_vigente})
+          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center shrink-0">
+            <Award className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <span>Topes SBU (${variables.sbu_vigente * 0.5} a ${variables.sbu_vigente})</span>
+          <span className="font-semibold text-amber-600 font-mono">
+            {((resumen.vpo_jubilacion_total / (resumen.vpo_total || 1)) * 100).toFixed(1)}% del DBO
           </span>
-        </div>
-        <div className="absolute right-3 top-3 text-amber-300/30 z-0">
-          <Award className="w-16 h-16" />
-        </div>
-        <div className="bg-black/15 py-1 px-4 text-[11px] font-medium text-white/90 flex items-center justify-between">
-          <span>Antigüedad al retiro ≥ 25 años</span>
-          <ArrowRight className="w-3.5 h-3.5" />
         </div>
       </div>
 
-      {/* 4. Small Box Red/Info: Colaboradores / Interés */}
-      <div className="bg-cyan-600 text-white rounded shadow-sm overflow-hidden relative flex flex-col justify-between">
-        <div className="p-4 relative z-10">
-          <div className="text-2xl font-bold font-mono tracking-tight">
-            {resumen.empleados_elegibles} / {resumen.total_empleados}
+      {/* 4. Colaboradores y Censo */}
+      <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs hover:shadow-md transition-all relative overflow-hidden group">
+        <div className="flex items-start justify-between">
+          <div>
+            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+              Elegibles / Total Censo
+            </span>
+            <div className="text-2xl font-bold font-mono tracking-tight text-slate-900 mt-2">
+              {resumen.empleados_elegibles} <span className="text-sm font-normal text-slate-400">/ {resumen.total_empleados}</span>
+            </div>
           </div>
-          <p className="text-xs uppercase font-semibold text-cyan-100 mt-1">
-            Elegibles a Jubilación ({resumen.porcentaje_elegibles}%)
-          </p>
-          <span className="text-[10px] text-cyan-100 block mt-0.5">
-            Costo Interés (VPO × i): {formatCurrency(resumen.costo_interes_estimado)}
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center shrink-0">
+            <Users className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <span>Edad Prom: <strong className="text-slate-700">{resumen.edad_promedio.toFixed(1)}a</strong></span>
+          <span className="font-semibold text-indigo-600">
+            {resumen.porcentaje_elegibles.toFixed(1)}% Jubilables
           </span>
-        </div>
-        <div className="absolute right-3 top-3 text-cyan-300/30 z-0">
-          <Users className="w-16 h-16" />
-        </div>
-        <div className="bg-black/15 py-1 px-4 text-[11px] font-medium text-white/90 flex items-center justify-between">
-          <span>Nómina: {formatCurrency(resumen.nomina_mensual_total)}</span>
-          <ArrowRight className="w-3.5 h-3.5" />
         </div>
       </div>
 

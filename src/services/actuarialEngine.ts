@@ -1,4 +1,4 @@
-import { VariablesMacro, EmpleadoInput, EmpleadoProcesado, ResumenMotor, ItemSensibilidad } from '../types/actuarial';
+import { VariablesMacro, EmpleadoInput, EmpleadoProcesado, ResumenMotor, ItemSensibilidad, DatosEmpresaEstudio } from '../types/actuarial';
 import * as XLSX from 'xlsx';
 
 export const DEFAULT_VARIABLES_MACRO: VariablesMacro = {
@@ -425,14 +425,103 @@ export function parsearFechaExcelADate(val: any): Date | null {
 }
 
 // Almacena metadatos de empresa detectados en el último archivo cargado
-export let METADATOS_EMPRESA_DETECTADOS: {
+export interface MetadatosEmpresaDetectados {
   nombre_empresa?: string;
+  nombre_comercial?: string;
   ruc?: string;
   direccion?: string;
   encargado?: string;
   provincia?: string;
   canton?: string;
-} = {};
+  ciudad?: string;
+  objeto_social?: string;
+  mision?: string;
+  vision?: string;
+  fecha_corte_valuacion?: string;
+  anio_evaluado?: number;
+  provision_anterior_jubilacion?: number;
+  provision_anterior_desahucio?: number;
+  pagos_realizados_jubilacion?: number;
+  pagos_realizados_desahucio?: number;
+}
+
+export let METADATOS_EMPRESA_DETECTADOS: MetadatosEmpresaDetectados = {};
+
+/**
+ * Escanea de forma exhaustiva todas las hojas y filas de un archivo Excel de la empresa
+ * para extraer automáticamente parámetros del estudio y datos institucionales.
+ */
+export function extraerParametrosEmpresaDesdeArchivo(archivoBuffer: any): Partial<DatosEmpresaEstudio> {
+  const wb = XLSX.read(archivoBuffer, { type: 'binary', cellDates: true });
+  const metadatos: Partial<DatosEmpresaEstudio> = {};
+
+  const cleanStr = (s: any) => 
+    String(s ?? '')
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+
+  for (const sheetName of wb.SheetNames) {
+    const ws = wb.Sheets[sheetName];
+    const data2D: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    if (!data2D || data2D.length === 0) continue;
+
+    for (let r = 0; r < Math.min(30, data2D.length); r++) {
+      const row = data2D[r];
+      if (!Array.isArray(row)) continue;
+      for (let c = 0; c < row.length; c++) {
+        const text = cleanStr(row[c]);
+        const val1 = String(row[c + 1] ?? '').trim();
+        const val2 = String(row[c + 2] ?? '').trim();
+        const val = val1 || val2;
+
+        if (text.includes('nombredelaempresa') || text.includes('razonsocial') || (text === 'empresa' && val)) {
+          if (val && !metadatos.nombre_empresa) metadatos.nombre_empresa = val;
+        }
+        if (text.includes('nombrecomercial') || text.includes('marcacomer')) {
+          if (val && !metadatos.nombre_comercial) metadatos.nombre_comercial = val;
+        }
+        if (text.includes('ruc') || text.includes('registrounicodecontribuyente')) {
+          const rawDigits = val.replace(/[^0-9]/g, '');
+          if (rawDigits.length >= 10 && !metadatos.ruc) metadatos.ruc = rawDigits;
+        }
+        if (text.includes('canton') || text.includes('ciudad') || text.includes('provincia')) {
+          if (val && !metadatos.ciudad) metadatos.ciudad = val;
+        }
+        if (text.includes('objetosocial') || text.includes('actividadeconomica')) {
+          if (val && !metadatos.objeto_social) metadatos.objeto_social = val;
+        }
+        if (text.includes('mision')) {
+          if (val && !metadatos.mision) metadatos.mision = val;
+        }
+        if (text.includes('vision')) {
+          if (val && !metadatos.vision) metadatos.vision = val;
+        }
+        if (text.includes('fechacorte') || text.includes('fechadevaluacion')) {
+          if (val && !metadatos.fecha_corte_valuacion) metadatos.fecha_corte_valuacion = val;
+        }
+        if (text.includes('anio') || text.includes('ejercicio')) {
+          const num = parseInt(val, 10);
+          if (!isNaN(num) && num >= 2000 && num <= 2100 && !metadatos.anio_evaluado) {
+            metadatos.anio_evaluado = num;
+            metadatos.anio_anterior = num - 1;
+          }
+        }
+        if ((text.includes('reserva') || text.includes('provision')) && text.includes('jubilacion')) {
+          const num = parseFloat(String(val).replace(/[^0-9.-]/g, ''));
+          if (!isNaN(num) && num > 0) metadatos.provision_anterior_jubilacion = num;
+        }
+        if ((text.includes('reserva') || text.includes('provision')) && text.includes('desahucio')) {
+          const num = parseFloat(String(val).replace(/[^0-9.-]/g, ''));
+          if (!isNaN(num) && num > 0) metadatos.provision_anterior_desahucio = num;
+        }
+      }
+    }
+  }
+
+  return metadatos;
+}
 
 /**
  * Lector flexible de archivos Excel (.xlsx, .xls) y CSV con soporte exacto para:
@@ -808,12 +897,64 @@ export function exportarResultadosAExcel(
   XLSX.writeFile(wb, 'Valuacion_Actuarial_NIC19_Ecuador.xlsx');
 }
 
+export const STORAGE_KEY_CUSTOM_TEMPLATE = 'CUSTOM_PLANTILLA_ACTUARIAL_XLSX';
+export const STORAGE_KEY_TEMPLATE_INFO = 'CUSTOM_PLANTILLA_ACTUARIAL_INFO';
+
+export function guardarPlantillaPersonalizada(base64Data: string, fileName: string, sizeBytes: number) {
+  localStorage.setItem(STORAGE_KEY_CUSTOM_TEMPLATE, base64Data);
+  localStorage.setItem(STORAGE_KEY_TEMPLATE_INFO, JSON.stringify({
+    nombre: fileName,
+    fecha: new Date().toLocaleDateString('es-EC', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+    tamanioKb: Math.max(1, Math.round(sizeBytes / 1024))
+  }));
+}
+
+export function obtenerInfoPlantillaPersonalizada(): { nombre: string; fecha: string; tamanioKb: number } | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_TEMPLATE_INFO);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+export function restablecerPlantillaPorDefecto() {
+  localStorage.removeItem(STORAGE_KEY_CUSTOM_TEMPLATE);
+  localStorage.removeItem(STORAGE_KEY_TEMPLATE_INFO);
+}
+
 /**
  * Genera y descarga la Plantilla Oficial idéntica al Formato de Información
- * aplicable al cálculo actuarial en Ecuador (conforme a la foto oficial del estudio)
+ * aplicable al cálculo actuarial en Ecuador.
+ * Si el Super Administrador subió una plantilla personalizada (.xlsx), se descarga esa.
  */
 export function descargarPlantillaOficial() {
-  const anioCorte = 2023;
+  try {
+    const customB64 = localStorage.getItem(STORAGE_KEY_CUSTOM_TEMPLATE);
+    const info = obtenerInfoPlantillaPersonalizada();
+    if (customB64) {
+      const binaryString = window.atob(customB64);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = info?.nombre || 'Formato_Oficial_Informacion_Actuarial.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      return;
+    }
+  } catch (e) {
+    console.error('Error al descargar plantilla personalizada, usando predeterminada:', e);
+  }
+
+  const anioCorte = new Date().getFullYear();
   const matrizPlantilla: (string | number)[][] = [
     // Fila 0: Título Principal
     [

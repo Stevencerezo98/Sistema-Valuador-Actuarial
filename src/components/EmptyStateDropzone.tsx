@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { EmpleadoInput, VariablesMacro } from '../types/actuarial';
+import { EmpleadoInput, VariablesMacro, RolUsuario } from '../types/actuarial';
 import { leerArchivoNomina, descargarPlantillaOficial, parsearTextoPegado, METADATOS_EMPRESA_DETECTADOS } from '../services/actuarialEngine';
 import { 
   Upload, 
@@ -11,19 +11,24 @@ import {
   Scale,
   ShieldCheck,
   FileCheck2,
-  AlertCircle
+  AlertCircle,
+  Building
 } from 'lucide-react';
 
 interface EmptyStateDropzoneProps {
-  onLoadData: (data: EmpleadoInput[]) => void;
+  onLoadData: (data: EmpleadoInput[], fileName?: string) => void;
   onOpenVariables: () => void;
   variables: VariablesMacro;
+  rolActual?: RolUsuario;
+  nombreEmpresa?: string;
 }
 
 export const EmptyStateDropzone: React.FC<EmptyStateDropzoneProps> = ({
   onLoadData,
   onOpenVariables,
-  variables
+  variables,
+  rolActual,
+  nombreEmpresa
 }) => {
   const [dragOver, setDragOver] = useState(false);
   const [pasteOpen, setPasteOpen] = useState(false);
@@ -31,7 +36,9 @@ export const EmptyStateDropzone: React.FC<EmptyStateDropzoneProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const processBuffer = (buffer: any) => {
+  const isCliente = rolActual === 'cliente';
+
+  const processBuffer = (buffer: any, fileName?: string) => {
     try {
       setErrorMsg(null);
       const rows = leerArchivoNomina(buffer);
@@ -39,7 +46,7 @@ export const EmptyStateDropzone: React.FC<EmptyStateDropzoneProps> = ({
         setErrorMsg('El archivo no contiene filas válidas de colaboradores.');
         return;
       }
-      onLoadData(rows);
+      onLoadData(rows, fileName);
     } catch (err: any) {
       setErrorMsg(`Error procesando el archivo: ${err.message}`);
     }
@@ -48,9 +55,10 @@ export const EmptyStateDropzone: React.FC<EmptyStateDropzoneProps> = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const fileName = file.name;
     const reader = new FileReader();
     reader.onload = (evt) => {
-      processBuffer(evt.target?.result);
+      processBuffer(evt.target?.result, fileName);
     };
     reader.readAsBinaryString(file);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -61,9 +69,10 @@ export const EmptyStateDropzone: React.FC<EmptyStateDropzoneProps> = ({
     setDragOver(false);
     const file = e.dataTransfer.files?.[0];
     if (!file) return;
+    const fileName = file.name;
     const reader = new FileReader();
     reader.onload = (evt) => {
-      processBuffer(evt.target?.result);
+      processBuffer(evt.target?.result, fileName);
     };
     reader.readAsBinaryString(file);
   };
@@ -77,7 +86,7 @@ export const EmptyStateDropzone: React.FC<EmptyStateDropzoneProps> = ({
         setErrorMsg('No se pudieron leer filas válidas.');
         return;
       }
-      onLoadData(rows);
+      onLoadData(rows, 'nomina_pegada.xlsx');
     } catch (err: any) {
       setErrorMsg(`Error al procesar el texto pegado: ${err.message}`);
     }
@@ -87,27 +96,31 @@ export const EmptyStateDropzone: React.FC<EmptyStateDropzoneProps> = ({
     <div className="space-y-6 max-w-4xl mx-auto py-2">
       
       {/* Tarjeta Principal de Carga - Estilo Corporativo Financiero */}
-      <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
         
         {/* Encabezado del Portal de Carga */}
         <div className="px-6 py-4 bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-md bg-blue-600 flex items-center justify-center text-white shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xs">
               <FileSpreadsheet className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-sm sm:text-base font-bold text-white tracking-tight">
-                Carga de Información para Valuación Actuarial
+                {isCliente 
+                  ? `Portal de Carga de Información de Nómina${nombreEmpresa ? ` · ${nombreEmpresa}` : ''}`
+                  : 'Carga de Información para Valuación Actuarial'}
               </h2>
               <p className="text-xs text-slate-300">
-                Formatos compatibles: Libros Excel (.xlsx, .xls) o texto delimitado (.csv)
+                {isCliente
+                  ? 'Suba el archivo de colaboradores solicitado por su actuario calificado'
+                  : 'Formatos compatibles: Libros Excel (.xlsx, .xls) o texto delimitado (.csv)'}
               </p>
             </div>
           </div>
 
           <button
             onClick={descargarPlantillaOficial}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer self-start sm:self-auto"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer self-start sm:self-auto"
             title="Descargar el formato oficial con la cabecera institucional y las 13 columnas reglamentarias"
           >
             <Download className="w-3.5 h-3.5" />
@@ -122,7 +135,7 @@ export const EmptyStateDropzone: React.FC<EmptyStateDropzoneProps> = ({
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
-            className={`border-2 border-dashed rounded-lg p-8 sm:p-10 transition-all text-center ${
+            className={`border-2 border-dashed rounded-2xl p-8 sm:p-10 transition-all text-center ${
               dragOver
                 ? 'border-blue-600 bg-blue-50/70'
                 : 'border-slate-300 bg-slate-50/60 hover:border-blue-500 hover:bg-white'
@@ -136,7 +149,7 @@ export const EmptyStateDropzone: React.FC<EmptyStateDropzoneProps> = ({
               className="hidden"
             />
 
-            <div className="w-14 h-14 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center mx-auto mb-3 shadow-2xs">
+            <div className="w-14 h-14 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center mx-auto mb-3 shadow-2xs">
               <Upload className="w-7 h-7" />
             </div>
 
@@ -145,13 +158,13 @@ export const EmptyStateDropzone: React.FC<EmptyStateDropzoneProps> = ({
             </h3>
             
             <p className="text-xs text-slate-500 max-w-lg mx-auto mb-5 leading-relaxed">
-              El motor procesará la información institucional, fechas de nacimiento, fechas de entrada, 
-              género (M/F) y remuneraciones computables para calcular las provisiones de 
-              <strong> Jubilación Patronal (Art. 216)</strong> y <strong>Bonificación por Desahucio (Art. 185)</strong>.
+              {isCliente
+                ? 'El archivo cargado será recibido de forma segura y se enviará la notificación correspondiente a su actuario calificado para la elaboración del estudio.'
+                : 'El motor procesará la información institucional, fechas de nacimiento, fechas de entrada, género (M/F) y remuneraciones computables para calcular las provisiones de Jubilación Patronal (Art. 216) y Bonificación por Desahucio (Art. 185).'}
             </p>
 
             {errorMsg && (
-              <div className="mb-4 p-3 rounded-md bg-red-50 border border-red-200 text-red-700 text-xs max-w-md mx-auto flex items-center gap-2 text-left">
+              <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs max-w-md mx-auto flex items-center gap-2 text-left">
                 <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
                 <span>{errorMsg}</span>
               </div>
@@ -160,7 +173,7 @@ export const EmptyStateDropzone: React.FC<EmptyStateDropzoneProps> = ({
             <div className="flex flex-wrap items-center justify-center gap-3">
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="px-5 py-2.5 rounded-md bg-blue-700 hover:bg-blue-800 text-white font-semibold text-xs transition shadow-xs flex items-center gap-2 cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white font-semibold text-xs transition shadow-xs flex items-center gap-2 cursor-pointer"
               >
                 <FileSpreadsheet className="w-4 h-4" />
                 <span>Examinar Archivo en mi Computador</span>
@@ -168,7 +181,7 @@ export const EmptyStateDropzone: React.FC<EmptyStateDropzoneProps> = ({
 
               <button
                 onClick={() => setPasteOpen(!pasteOpen)}
-                className="px-4 py-2.5 rounded-md bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-semibold text-xs transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-semibold text-xs transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
               >
                 <ClipboardPaste className="w-4 h-4 text-slate-600" />
                 <span>{pasteOpen ? 'Ocultar Área de Pegado' : 'Pegar Celdas de Excel'}</span>

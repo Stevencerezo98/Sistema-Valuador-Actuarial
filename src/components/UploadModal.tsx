@@ -14,7 +14,7 @@ import {
 interface UploadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLoadData: (data: EmpleadoInput[]) => void;
+  onLoadData: (data: EmpleadoInput[], fileName?: string) => void;
 }
 
 export const UploadModal: React.FC<UploadModalProps> = ({
@@ -30,7 +30,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
   if (!isOpen) return null;
 
-  const processBuffer = (buffer: any) => {
+  const processBuffer = (buffer: any, fileName?: string) => {
     try {
       setErrorMsg(null);
       const rows = leerArchivoNomina(buffer);
@@ -38,7 +38,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
         setErrorMsg('El archivo no contiene filas válidas.');
         return;
       }
-      onLoadData(rows);
+      onLoadData(rows, fileName);
       onClose();
     } catch (err: any) {
       setErrorMsg(`Error procesando el archivo: ${err.message}`);
@@ -48,9 +48,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const fileName = file.name;
     const reader = new FileReader();
     reader.onload = (evt) => {
-      processBuffer(evt.target?.result);
+      processBuffer(evt.target?.result, fileName);
     };
     reader.readAsBinaryString(file);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -61,9 +62,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({
     setDragOver(false);
     const file = e.dataTransfer.files?.[0];
     if (!file) return;
+    const fileName = file.name;
     const reader = new FileReader();
     reader.onload = (evt) => {
-      processBuffer(evt.target?.result);
+      processBuffer(evt.target?.result, fileName);
     };
     reader.readAsBinaryString(file);
   };

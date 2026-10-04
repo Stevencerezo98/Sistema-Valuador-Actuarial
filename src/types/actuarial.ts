@@ -39,12 +39,89 @@ export interface EmpleadoInput {
 
 export type RolUsuario = 'cliente' | 'actuario' | 'admin';
 
+export interface PermisosModulos {
+  dashboard: boolean;     // Cálculo de Nómina & Valuación Actuarial
+  estudios: boolean;      // Estudios Actuariales Guardados & Histórico
+  niif: boolean;          // Reportería Contable NIIF & Sensibilidad (NIC 19 § 145)
+  mortality: boolean;     // Tablas de Mortalidad General IESS (RO 650)
+  methodology: boolean;   // Marco Jurídico & Metodología Actuarial
+  database: boolean;      // Modelo de Datos PostgreSQL & FastAPI
+  python: boolean;        // Código Python Pandas & Funciones
+  users: boolean;         // Gestión de Usuarios, Roles y Plantilla (Exclusivo Super Admin)
+}
+
+export interface PermisosAcciones {
+  editarVariables: boolean;       // Modificar variables macro (i, s, r, SBU)
+  editarEmpresa: boolean;         // Modificar datos comerciales de la empresa
+  subirNomina: boolean;           // Cargar nómina de empleados (.xlsx / .csv)
+  descargarWord: boolean;         // Generar y descargar Estudio Actuarial en Word (.docx)
+  descargarPdf: boolean;          // Generar y descargar Estudio Actuarial en PDF
+  exportarExcel: boolean;         // Exportar libro de cálculo Excel (.xlsx)
+  personalizarPlantilla: boolean; // Subir / definir el Formato Oficial de Excel
+  gestionarUsuarios: boolean;     // Crear usuarios, asignar roles, resetear PIN
+}
+
+export interface PermisosRol {
+  modulos: PermisosModulos;
+  acciones: PermisosAcciones;
+}
+
+export type ConfiguracionPermisos = Record<RolUsuario, PermisosRol>;
+
 export interface InfoUsuario {
   id: string;
+  usuario: string;
   nombre: string;
   email: string;
+  celular?: string;
+  pin?: string;
+  password?: string;
   rol: RolUsuario;
   empresaAsignada?: string;
+  empresa?: string;
+  razonSocial?: string;
+  ruc?: string;
+  estado?: 'activo' | 'inactivo';
+  fechaCreacion?: string;
+  permisosPersonalizados?: Partial<PermisosRol>;
+}
+
+export type EstadoDescargaCliente = 'bloqueado' | 'solicitado' | 'permitido';
+
+export interface EstudioGuardado {
+  id: string;
+  titulo: string;
+  rucEmpresa: string;
+  nombreEmpresa: string;
+  fechaCorte: string;
+  anioEvaluado: number;
+  fechaElaboracion: string;
+  actuarioNombre: string;
+  numEmpleados: number;
+  resumen: ResumenMotor;
+  variables: VariablesMacro;
+  empresaSnapshot: DatosEmpresaEstudio;
+  censoData: EmpleadoInput[];
+  estadoDescargaCliente: EstadoDescargaCliente;
+  fechaSolicitud?: string;
+  fechaAprobacion?: string;
+  aprobadoPor?: string;
+}
+
+export interface EntregaNominaCliente {
+  id: string;
+  rucEmpresa: string;
+  nombreEmpresa: string;
+  usuarioId: string;
+  usuarioNombre: string;
+  nombreArchivo: string;
+  numRegistros: number;
+  fechaSubida: string;
+  notificadoAlActuario: boolean;
+  fechaNotificacion?: string;
+  datosCenso: EmpleadoInput[];
+  estado: 'recibido' | 'en_valuacion' | 'estudio_generado';
+  estudioGeneradoId?: string;
 }
 
 export interface EmpleadoProcesado {
@@ -146,28 +223,30 @@ export interface DatosEmpresaEstudio {
   pagos_realizados_desahucio: number;
 }
 
-export const DEFAULT_EMPRESA_CAJAMARCA: DatosEmpresaEstudio = {
-  nombre_empresa: 'CAJAMARCA PROTECTIVE SERVICES CÍA. LTDA.',
-  nombre_comercial: 'CAJAPROTSERV',
-  ruc: '0992804561001',
-  ciudad: 'Guayaquil',
-  fecha_constitucion: '6 de mayo de 2013',
-  plazo_duracion: '50 años (hasta el 6 de mayo de 2063)',
-  objeto_social: 'Proveer de servicios complementarios de vigilancia, sistemas de alarma, servicios de custodia, servicios de guardianía de seguridad y servicios de seguridad física privada mediante un sistema de gestión de calidad.',
-  mision: 'Desarrollar a su gente, innovar en tecnología y estructurar una operación eficaz para alcanzar niveles de seguridad nunca antes vistos.',
-  vision: 'Ser la empresa de seguridad con mayor facturación en Ecuador, y hacer de la empresa su familia y su hogar.',
-  fecha_corte_valuacion: '31 de diciembre de 2023',
-  anio_evaluado: 2023,
-  anio_anterior: 2022,
-  fecha_emision_informe: 'Quito, abril de 2024',
-  actuario_nombre: 'Econ. Hugo Paredes Estrella',
-  actuario_titulo: 'Servicios Actuariales',
-  actuario_registro_scvs: 'Registro No. 1-014 SCVS',
-  actuario_registro_sb: 'Registro No. PEA-2007-005 SB',
+export const DEFAULT_DATOS_EMPRESA: DatosEmpresaEstudio = {
+  nombre_empresa: 'EMPRESA EVALUADA S.A.',
+  nombre_comercial: 'EMPRESA EVALUADA',
+  ruc: '1790000000001',
+  ciudad: 'Quito, Ecuador',
+  fecha_constitucion: '10 de enero de 2015',
+  plazo_duracion: 'Plazo Indefinido',
+  objeto_social: 'Actividades comerciales, industriales y de servicios en el territorio ecuatoriano.',
+  mision: 'Brindar servicios de excelencia operativa y cumplimiento laboral conforme a la normativa vigente.',
+  vision: 'Ser una empresa referente e innovadora en su sector productivo.',
+  fecha_corte_valuacion: '31 de diciembre de 2024',
+  anio_evaluado: 2024,
+  anio_anterior: 2023,
+  fecha_emision_informe: 'Enero 2025',
+  actuario_nombre: 'Perito Actuario Calificado',
+  actuario_titulo: 'Consultoría Actuarial & Auditoría NIIF',
+  actuario_registro_scvs: 'Registro SCVS No. 1-000',
+  actuario_registro_sb: 'Registro SB No. PEA-000',
   tasa_interes_tecnico: 0.04,
   inflacion: 0.022,
-  provision_anterior_jubilacion: 628717.06,
-  provision_anterior_desahucio: 402791.62,
+  provision_anterior_jubilacion: 0.00,
+  provision_anterior_desahucio: 0.00,
   pagos_realizados_jubilacion: 0.00,
-  pagos_realizados_desahucio: 89444.12
+  pagos_realizados_desahucio: 0.00
 };
+
+export const DEFAULT_EMPRESA_CAJAMARCA = DEFAULT_DATOS_EMPRESA;

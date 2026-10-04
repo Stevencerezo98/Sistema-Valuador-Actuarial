@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { KpiCards } from './components/KpiCards';
@@ -14,29 +14,148 @@ import { EmployeeDetailModal } from './components/EmployeeDetailModal';
 import { UploadModal } from './components/UploadModal';
 import { MacroVariablesModal } from './components/MacroVariablesModal';
 import { CompanyConfigModal } from './components/CompanyConfigModal';
+import { UserManagementView } from './components/UserManagementView';
+import { AuthPortal } from './components/AuthPortal';
+import { SaveStudyModal } from './components/SaveStudyModal';
+import { ActuarialStudiesView } from './components/ActuarialStudiesView';
+import { ClientConfirmationView } from './components/ClientConfirmationView';
+import { MobileApiModal } from './components/MobileApiModal';
+import { LoginBrandConfigModal } from './components/LoginBrandConfigModal';
+import { FinnovaActuaryDashboard } from './components/FinnovaActuaryDashboard';
+import { getInitialTheme, applyTheme, ThemeMode } from './services/themeService';
+import { CENSO_INICIAL_ACTUARIAL } from './data/defaultCensus';
+import { enviarNotificacionCorreoActuario } from './services/notificationService';
 
-import { EmpleadoInput, EmpleadoProcesado, VariablesMacro, DatosEmpresaEstudio, DEFAULT_EMPRESA_CAJAMARCA, RolUsuario } from './types/actuarial';
-import { DEFAULT_VARIABLES_MACRO, procesarMotorActuarial, calcularSensibilidadNIIF } from './services/actuarialEngine';
+import { 
+  EmpleadoInput, 
+  EmpleadoProcesado, 
+  VariablesMacro, 
+  DatosEmpresaEstudio, 
+  DEFAULT_DATOS_EMPRESA, 
+  RolUsuario, 
+  InfoUsuario,
+  EntregaNominaCliente 
+} from './types/actuarial';
+import { 
+  DEFAULT_VARIABLES_MACRO, 
+  procesarMotorActuarial, 
+  calcularSensibilidadNIIF, 
+  METADATOS_EMPRESA_DETECTADOS,
+  exportarResultadosAExcel 
+} from './services/actuarialEngine';
 import { generarEstudioWord } from './services/wordReportGenerator';
-import { generarEstudioCompletoPDF } from './services/cajamarcaPdfReportGenerator';
+import { generarEstudioCompletoPDF } from './services/estudioPdfReportGenerator';
+import { 
+  obtenerSesionActiva, 
+  cerrarSesionActiva, 
+  obtenerPermisosEfectivos 
+} from './services/authService';
+import { 
+  registrarEntregaNomina, 
+  obtenerUltimaEntregaEmpresa 
+} from './services/studiesService';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
-  const [rolActual, setRolActual] = useState<RolUsuario>('admin');
   
-  // DATOS INICIALES VACÍOS: Se eliminaron los datos de prueba a solicitud del usuario
-  const [censusInput, setCensusInput] = useState<EmpleadoInput[]>([]);
+  // Sesión de usuario autenticado
+  const [usuarioActivo, setUsuarioActivo] = useState<InfoUsuario | null>(() => obtenerSesionActiva());
+  const [rolActual, setRolActual] = useState<RolUsuario>(() => usuarioActivo?.rol || 'admin');
+  const [permisosVersion, setPermisosVersion] = useState<number>(0);
+
+  // Tema Claro / Oscuro (Por defecto TEMA CLARO según preferencia del usuario)
+  const [theme, setTheme] = useState<ThemeMode>(() => getInitialTheme());
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+
+  const handleToggleTheme = () => {
+    const next: ThemeMode = theme === 'claro' ? 'oscuro' : 'claro';
+    setTheme(next);
+    applyTheme(next);
+  };
+
+  // Permisos efectivos (del rol o personalizados por usuario)
+  const permisos = useMemo(() => {
+    return obtenerPermisosEfectivos(usuarioActivo, rolActual);
+  }, [usuarioActivo, rolActual, permisosVersion]);
+
+  // Protección de rutas y módulos:
+  // Si la pestaña activa no está permitida para este rol/usuario, redirigir a 'dashboard'
+  useEffect(() => {
+    if (activeTab === 'users' && rolActual !== 'admin') {
+      setActiveTab('dashboard');
+      return;
+    }
+    const moduloPermitido = permisos.modulos[activeTab as keyof typeof permisos.modulos];
+    if (moduloPermitido === false) {
+      setActiveTab('dashboard');
+    }
+  }, [activeTab, rolActual, permisos]);
+
+  // Censo Actuarial Oficial para visualización inmediata en Dashboard Actuario/Admin
+  const [censusInput, setCensusInput] = useState<EmpleadoInput[]>(() => CENSO_INICIAL_ACTUARIAL);
   const [variables, setVariables] = useState<VariablesMacro>(DEFAULT_VARIABLES_MACRO);
 
   // Modales
   const [isUploadOpen, setIsUploadOpen] = useState<boolean>(false);
   const [isVariablesOpen, setIsVariablesOpen] = useState<boolean>(false);
   const [isCompanyConfigOpen, setIsCompanyConfigOpen] = useState<boolean>(false);
+  const [isSaveStudyOpen, setIsSaveStudyOpen] = useState<boolean>(false);
+  const [isMobileApiOpen, setIsMobileApiOpen] = useState<boolean>(false);
+  const [isLoginBrandOpen, setIsLoginBrandOpen] = useState<boolean>(false);
   const [selectedEmployee, setSelectedEmployee] = useState<EmpleadoProcesado | null>(null);
 
-  // Datos de la empresa para la generación del estudio (formato Cajamarca)
-  const [empresa, setEmpresa] = useState<DatosEmpresaEstudio>(DEFAULT_EMPRESA_CAJAMARCA);
+  // Estado de entrega de nómina para el cliente
+  const [ultimaEntregaCliente, setUltimaEntregaCliente] = useState<EntregaNominaCliente | null>(() => {
+    if (usuarioActivo?.rol === 'cliente') {
+      return obtenerUltimaEntregaEmpresa(usuarioActivo.ruc, usuarioActivo.empresa || usuarioActivo.razonSocial);
+    }
+    return null;
+  });
+
+  // Cerrar Sesión
+  const handleCerrarSesion = () => {
+    cerrarSesionActiva();
+    setUsuarioActivo(null);
+    setCensusInput([]);
+    setUltimaEntregaCliente(null);
+  };
+
+  // Sincronizar rol si cambia el usuario activo
+  const handleCambiarRolActivo = (nuevoRol: RolUsuario) => {
+    setRolActual(nuevoRol);
+    if (usuarioActivo) {
+      setUsuarioActivo(prev => prev ? { ...prev, rol: nuevoRol } : null);
+    }
+    // Si cambia de rol y estaba en una vista no autorizada (como 'users'), volver a dashboard
+    if (nuevoRol !== 'admin' && activeTab === 'users') {
+      setActiveTab('dashboard');
+    }
+  };
+
+  // Datos y parámetros de la empresa para la generación del estudio
+  const [empresa, setEmpresa] = useState<DatosEmpresaEstudio>(() => {
+    try {
+      const saved = localStorage.getItem('PARAMETROS_EMPRESA_ACTUARIAL');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return DEFAULT_DATOS_EMPRESA;
+  });
+
+  // Sincronizar datos de empresa con el usuario logueado si es cliente
+  useEffect(() => {
+    if (usuarioActivo && usuarioActivo.rol === 'cliente') {
+      setEmpresa(prev => ({
+        ...prev,
+        nombre_empresa: usuarioActivo.razonSocial || usuarioActivo.empresa || prev.nombre_empresa,
+        ruc: usuarioActivo.ruc || prev.ruc
+      }));
+      setUltimaEntregaCliente(obtenerUltimaEntregaEmpresa(usuarioActivo.ruc, usuarioActivo.empresa || usuarioActivo.razonSocial));
+    }
+  }, [usuarioActivo]);
 
   // Procesamiento del motor actuarial
   const { resultados, resumen } = useMemo(() => {
@@ -48,8 +167,65 @@ export default function App() {
     return calcularSensibilidadNIIF(censusInput, variables);
   }, [censusInput, variables]);
 
-  const handleLoadData = (newData: EmpleadoInput[]) => {
+  // Manejo de carga de datos según el rol
+  const handleLoadData = (newData: EmpleadoInput[], fileName?: string) => {
+    // REGLA CRÍTICA PARA EL CLIENTE:
+    // Al cliente NO tiene que salirle nada del estudio, valuación o descarga.
+    // Solo debe registrarse la entrega y mostrar el agradecimiento + botón de notificación.
+    if (rolActual === 'cliente') {
+      const nomArchivo = fileName || 'nomina_empresa.xlsx';
+      const entrega = registrarEntregaNomina({
+        rucEmpresa: usuarioActivo?.ruc || empresa.ruc || '1790000000001',
+        nombreEmpresa: usuarioActivo?.razonSocial || usuarioActivo?.empresa || empresa.nombre_empresa || 'Empresa',
+        usuarioId: usuarioActivo?.id || 'usr-cli',
+        usuarioNombre: usuarioActivo?.nombre || 'Representante Empresa',
+        nombreArchivo: nomArchivo,
+        numRegistros: newData.length,
+        datosCenso: newData
+      });
+      setUltimaEntregaCliente(entrega);
+
+      // SERVICIO DE CORREO AUTOMÁTICO: Enviar correo al actuario con nombre de empresa y fecha de carga
+      enviarNotificacionCorreoActuario({
+        nombreEmpresa: entrega.nombreEmpresa,
+        ruc: entrega.rucEmpresa,
+        nombreArchivo: entrega.nombreArchivo,
+        numRegistros: entrega.numRegistros,
+        fechaCarga: entrega.fechaSubida,
+        usuarioNombre: entrega.usuarioNombre,
+        actuarioEmail: 'actuario@estudiosactuariales.ec'
+      }).catch(err => console.error('Error enviando notificación por correo:', err));
+
+      setActiveTab('dashboard');
+      return;
+    }
+
+    // Para el actuario o administrador:
+    // Carga de nómina al motor para cálculo completo
     setCensusInput(newData);
+    // Autollenar parámetros de la empresa si fueron detectados en el archivo
+    const meta = METADATOS_EMPRESA_DETECTADOS;
+    if (meta.nombre_empresa || meta.ruc || meta.canton || meta.ciudad) {
+      setEmpresa(prev => {
+        const updated: DatosEmpresaEstudio = {
+          ...prev,
+          nombre_empresa: meta.nombre_empresa || prev.nombre_empresa,
+          nombre_comercial: meta.nombre_comercial || prev.nombre_comercial,
+          ruc: meta.ruc || prev.ruc,
+          ciudad: meta.canton ? `${meta.canton}, ${meta.provincia || 'Ecuador'}` : (meta.ciudad || prev.ciudad),
+          objeto_social: meta.objeto_social || prev.objeto_social,
+          fecha_corte_valuacion: meta.fecha_corte_valuacion || prev.fecha_corte_valuacion,
+          anio_evaluado: meta.anio_evaluado || prev.anio_evaluado,
+          anio_anterior: meta.anio_evaluado ? meta.anio_evaluado - 1 : prev.anio_anterior,
+          provision_anterior_jubilacion: meta.provision_anterior_jubilacion || prev.provision_anterior_jubilacion,
+          provision_anterior_desahucio: meta.provision_anterior_desahucio || prev.provision_anterior_desahucio,
+        };
+        try {
+          localStorage.setItem('PARAMETROS_EMPRESA_ACTUARIAL', JSON.stringify(updated));
+        } catch (e) {}
+        return updated;
+      });
+    }
     setActiveTab('dashboard');
   };
 
@@ -73,10 +249,24 @@ export default function App() {
     }
   };
 
+  // Si no hay sesión activa, mostrar portal de acceso seguro con 2FA (PIN)
+  if (!usuarioActivo) {
+    return (
+      <AuthPortal
+        onLoginSuccess={(usuario) => {
+          setUsuarioActivo(usuario);
+          setRolActual(usuario.rol);
+        }}
+      />
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[#f4f6f9] text-gray-800 flex font-sans antialiased">
+    <div className={`min-h-screen flex font-sans antialiased selection:bg-blue-100 selection:text-blue-900 transition-colors duration-200 ${
+      theme === 'oscuro' ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-800'
+    }`}>
       
-      {/* AdminLTE Sidebar */}
+      {/* Modern Sidebar */}
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -87,12 +277,13 @@ export default function App() {
         numEmpleados={censusInput.length}
         rolActual={rolActual}
         nombreEmpresa={empresa.nombre_empresa}
+        permisos={permisos}
       />
 
-      {/* Main Content Wrapper (AdminLTE content-wrapper) */}
+      {/* Main Content Wrapper */}
       <div className="flex-1 flex flex-col min-w-0">
         
-        {/* AdminLTE Navbar */}
+        {/* Executive Header */}
         <Header
           resultados={resultados}
           resumen={resumen}
@@ -103,42 +294,66 @@ export default function App() {
           onOpenUpload={() => setIsUploadOpen(true)}
           onOpenVariables={() => setIsVariablesOpen(true)}
           onOpenCompanyConfig={() => setIsCompanyConfigOpen(true)}
+          onOpenSaveStudy={() => setIsSaveStudyOpen(true)}
           onDownloadWord={handleDownloadWord}
           onDownloadStudyPdf={handleDownloadStudyPdf}
           onClearData={handleClearData}
+          onOpenMobileApi={() => setIsMobileApiOpen(true)}
+          onOpenLoginBrandConfig={() => setIsLoginBrandOpen(true)}
           hasData={censusInput.length > 0}
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
           rolActual={rolActual}
-          onCambiarRol={setRolActual}
+          onCambiarRol={handleCambiarRolActivo}
           empresa={empresa}
+          usuarioActivo={usuarioActivo}
+          onCerrarSesion={handleCerrarSesion}
+          permisos={permisos}
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
         />
 
-        {/* AdminLTE Content Header (Breadcrumbs & Page Title) */}
-        <div className="px-4 sm:px-6 pt-4 pb-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-gray-200/80 bg-white/70">
+        {/* Content Header (Breadcrumbs & Page Title) */}
+        <div className={`px-6 pt-5 pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b transition-colors duration-200 ${
+          theme === 'oscuro' 
+            ? 'border-slate-800 bg-slate-900/90 text-white' 
+            : 'border-slate-200/80 bg-white/70 text-slate-900'
+        } backdrop-blur-md`}>
           <div>
-            <h1 className="text-lg sm:text-xl font-bold text-gray-800 tracking-tight">
-              {activeTab === 'dashboard' && 'Cálculo y Valuación Actuarial de Nómina (NIC 19)'}
-              {activeTab === 'niif' && 'Módulo 3: Reportería Contable NIIF & Sensibilidad (NIC 19 § 145)'}
-              {activeTab === 'mortality' && 'Tablas de Mortalidad General IESS (Registro Oficial No. 650 de 2002)'}
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+              {activeTab === 'dashboard' && (rolActual === 'cliente' ? 'Portal de Carga de Información de Nómina' : 'Cálculo y Valuación Actuarial de Nómina (NIC 19)')}
+              {activeTab === 'estudios' && 'Estudios Actuariales Realizados'}
+              {activeTab === 'niif' && 'Reportería Contable NIIF & Sensibilidad (NIC 19 § 145)'}
+              {activeTab === 'mortality' && 'Tablas de Mortalidad General IESS (Registro Oficial No. 650)'}
+              {activeTab === 'users' && 'Gestión de Roles, Permisos y Usuarios del Sistema'}
               {activeTab === 'database' && 'Modelo de Datos PostgreSQL & Backend FastAPI'}
               {activeTab === 'python' && 'Módulo de Funciones en Python (pandas & numpy)'}
               {activeTab === 'methodology' && 'Marco Jurídico & Metodología Actuarial'}
             </h1>
-            <p className="text-xs text-gray-500">
-              {activeTab === 'mortality' 
+            <p className="text-xs text-slate-500 mt-0.5">
+              {activeTab === 'estudios'
+                ? (rolActual === 'cliente' 
+                    ? `Estudios elaborados para ${empresa.nombre_empresa}. Solicite autorización a su actuario para descargar los informes.`
+                    : 'Archivo formal de estudios actuariales y bandeja de solicitudes de descarga de clientes.')
+                : activeTab === 'mortality' 
                 ? 'Modelos Makeham-Gompertz, vigencia jurídica y coeficientes del Art. 218 del Código del Trabajo'
-                : 'Desahucio (Art. 185) y Jubilación Patronal (Art. 216 con límites de SBU en Ecuador)'}
+                : activeTab === 'users'
+                ? 'Matriz de permisos de vistas y acciones por rol, directorio de usuarios y plantilla oficial Excel'
+                : (rolActual === 'cliente'
+                    ? 'Suba el archivo de colaboradores solicitado para la realización del estudio actuarial.'
+                    : 'Desahucio (Art. 185) y Jubilación Patronal (Art. 216 con límites de SBU en Ecuador)')}
             </p>
           </div>
 
-          <nav className="text-xs text-gray-500 flex items-center gap-1.5 font-medium">
-            <span className="text-blue-600">Inicio</span>
+          <nav className="text-xs text-slate-500 flex items-center gap-1.5 font-medium">
+            <span className="text-blue-600">Portal</span>
             <span>/</span>
-            <span className="text-gray-800 font-semibold">
-              {activeTab === 'dashboard' && 'Nómina'}
+            <span className="text-slate-800 font-semibold">
+              {activeTab === 'dashboard' && (rolActual === 'cliente' ? 'Carga Nómina' : 'Nómina')}
+              {activeTab === 'estudios' && 'Estudios Actuariales'}
               {activeTab === 'niif' && 'Reportes NIIF'}
               {activeTab === 'mortality' && 'Mortalidad IESS'}
+              {activeTab === 'users' && 'Roles & Permisos'}
               {activeTab === 'database' && 'PostgreSQL'}
               {activeTab === 'python' && 'Python'}
               {activeTab === 'methodology' && 'Metodología'}
@@ -146,70 +361,91 @@ export default function App() {
           </nav>
         </div>
 
-        {/* AdminLTE Main Content Area */}
+        {/* Main Content Area */}
         <main className="flex-1 p-4 sm:p-6 space-y-5">
           
-          {/* Tab 1: Dashboard / Valuación */}
+          {/* TAB 1: DASHBOARD / CARGA DE NÓMINA O VALUACIÓN */}
           {activeTab === 'dashboard' && (
-            censusInput.length === 0 ? (
-              <EmptyStateDropzone
-                onLoadData={handleLoadData}
-                onOpenVariables={() => setIsVariablesOpen(true)}
-                variables={variables}
-              />
+            rolActual === 'cliente' ? (
+              // VISTA EXCLUSIVA PARA EL CLIENTE:
+              // Si ya subió un archivo, mostrar únicamente el mensaje de agradecimiento y el botón de notificar al actuario.
+              // NO sale ningún botón para descargar Word, PDF o Excel del estudio ni la valuación.
+              ultimaEntregaCliente ? (
+                <ClientConfirmationView
+                  entrega={ultimaEntregaCliente}
+                  empresa={empresa}
+                  onSubirOtra={() => setUltimaEntregaCliente(null)}
+                  onVerEstudios={() => setActiveTab('estudios')}
+                />
+              ) : (
+                <EmptyStateDropzone
+                  onLoadData={handleLoadData}
+                  onOpenVariables={() => setIsVariablesOpen(true)}
+                  variables={variables}
+                  rolActual={rolActual}
+                  nombreEmpresa={empresa.nombre_empresa}
+                />
+              )
             ) : (
-              <div className="space-y-5">
-                
-                {/* Status Callout (Bootstrap alert style) */}
-                <div className="bg-white border-l-4 border-l-green-600 p-3.5 rounded shadow-2xs border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
-                    <span className="text-gray-700">
-                      Archivo procesado correctamente: <strong className="text-gray-900">{censusInput.length} colaboradores</strong> evaluados bajo NIC 19.
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setActiveTab('niif')}
-                      className="text-purple-600 hover:text-purple-800 font-bold hover:underline cursor-pointer"
-                    >
-                      Ver Reporte NIIF y Sensibilidad
-                    </button>
-                    <span className="text-gray-300">|</span>
-                    <button
-                      onClick={() => setIsUploadOpen(true)}
-                      className="text-blue-600 hover:text-blue-800 font-bold hover:underline cursor-pointer"
-                    >
-                      Subir otro archivo
-                    </button>
-                    <span className="text-gray-300">|</span>
-                    <button
-                      onClick={handleClearData}
-                      className="text-red-600 hover:text-red-800 hover:underline cursor-pointer"
-                    >
-                      Limpiar
-                    </button>
+              // VISTA PARA ACTUARIO / ADMINISTRADOR
+              censusInput.length === 0 ? (
+                <EmptyStateDropzone
+                  onLoadData={handleLoadData}
+                  onOpenVariables={() => setIsVariablesOpen(true)}
+                  variables={variables}
+                  rolActual={rolActual}
+                  nombreEmpresa={empresa.nombre_empresa}
+                />
+              ) : (
+                <div className="space-y-6">
+                  {/* Dashboard Ejecutivo Estilo Finnova (Para Actuario y Superadmin) */}
+                  <FinnovaActuaryDashboard
+                    resultados={resultados}
+                    resumen={resumen}
+                    variables={variables}
+                    empresa={empresa}
+                    rolActual={rolActual}
+                    onOpenUpload={() => setIsUploadOpen(true)}
+                    onOpenSaveStudy={() => setIsSaveStudyOpen(true)}
+                    onOpenEmployeeDetail={(emp) => setSelectedEmployee(emp)}
+                    onNavigateTab={(tab) => setActiveTab(tab)}
+                    onExportExcel={() => exportarResultadosAExcel(resultados, resumen, variables, sensibilidad)}
+                    theme={theme}
+                  />
+
+                  {/* Gráficos Interactivos Recharts */}
+                  <div className={`p-5 rounded-3xl border transition-colors ${
+                    theme === 'oscuro' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/90'
+                  } shadow-xs`}>
+                    <div className="mb-3 flex items-center justify-between">
+                      <h3 className="text-sm font-bold tracking-tight">
+                        Curvas Actuariales y Distribución Demográfica
+                      </h3>
+                      <span className="text-xs text-slate-400">
+                        Visualización Gráfica NIIF
+                      </span>
+                    </div>
+                    <ActuarialCharts resultados={resultados} variables={variables} />
                   </div>
                 </div>
-
-                {/* Small Box KPI Cards */}
-                <KpiCards resumen={resumen} variables={variables} />
-
-                {/* Gráficos Interactivos Recharts (Distribución de Pasivos y Flujo de Jubilación) */}
-                <ActuarialCharts resultados={resultados} variables={variables} />
-
-                {/* Employee Table */}
-                <EmployeeTable
-                  resultados={resultados}
-                  resumen={resumen}
-                  variables={variables}
-                  sensibilidad={sensibilidad}
-                  onSelectEmployee={setSelectedEmployee}
-                  onOpenUpload={() => setIsUploadOpen(true)}
-                  onClearData={handleClearData}
-                />
-              </div>
+              )
             )
+          )}
+
+          {/* TAB: ESTUDIOS ACTUARIALES (SECCIÓN NUEVA SOLICITADA) */}
+          {activeTab === 'estudios' && (
+            <ActuarialStudiesView
+              rolActual={rolActual}
+              empresa={empresa}
+              usuarioActivo={usuarioActivo}
+              onCargarCensoAlMotor={(censo, empresaData) => {
+                setCensusInput(censo);
+                if (empresaData) {
+                  setEmpresa(prev => ({ ...prev, ...empresaData }));
+                }
+                setActiveTab('dashboard');
+              }}
+            />
           )}
 
           {/* Tab 2: Reportería NIIF y Sensibilidad */}
@@ -225,6 +461,16 @@ export default function App() {
           {/* Tab: Tablas de Mortalidad IESS (Registro Oficial No. 650) */}
           {activeTab === 'mortality' && (
             <MortalityTablesView />
+          )}
+
+          {/* Tab: Gestión de Usuarios, Roles y Plantilla Oficial (EXCLUSIVO SUPER ADMIN) */}
+          {activeTab === 'users' && (
+            <UserManagementView
+              rolActual={rolActual}
+              onCambiarRol={handleCambiarRolActivo}
+              empresa={empresa}
+              onPermisosActualizados={() => setPermisosVersion(v => v + 1)}
+            />
           )}
 
           {/* Tab 3: Base de Datos PostgreSQL y Arquitectura */}
@@ -244,20 +490,22 @@ export default function App() {
 
         </main>
 
-        {/* AdminLTE Footer */}
-        <footer className="bg-white border-t border-gray-200 px-4 sm:px-6 py-3 text-xs text-gray-500 flex flex-col sm:flex-row items-center justify-between gap-2">
+        {/* Executive Footer */}
+        <footer className="bg-white border-t border-slate-200/80 px-6 py-3.5 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div>
-            <strong>Sistema Actuarial NIC 19 Ecuador</strong> &copy; 2026 • Código del Trabajo (Art. 185 y 216).
+            <strong>Sistema Valuador Actuarial NIC 19 Ecuador</strong> &copy; 2026 · Código del Trabajo (Art. 185 y 216).
           </div>
-          <div className="flex items-center gap-3 font-mono text-[11px] text-gray-500">
-            <span>i = {(variables.tasa_descuento * 100).toFixed(1)}%</span>
-            <span>•</span>
-            <span>s = {(variables.tasa_incremento_sal * 100).toFixed(1)}%</span>
-            <span>•</span>
-            <span>r = {(variables.tasa_rotacion * 100).toFixed(1)}%</span>
-            <span>•</span>
-            <span>SBU = ${variables.sbu_vigente}</span>
-          </div>
+          {rolActual !== 'cliente' && (
+            <div className="flex items-center gap-3 font-mono text-[11px] text-slate-500">
+              <span>i = {(variables.tasa_descuento * 100).toFixed(1)}%</span>
+              <span>·</span>
+              <span>s = {(variables.tasa_incremento_sal * 100).toFixed(1)}%</span>
+              <span>·</span>
+              <span>r = {(variables.tasa_rotacion * 100).toFixed(1)}%</span>
+              <span>·</span>
+              <span>SBU = ${variables.sbu_vigente}</span>
+            </div>
+          )}
         </footer>
 
       </div>
@@ -287,6 +535,25 @@ export default function App() {
         empleado={selectedEmployee}
         variables={variables}
         onClose={() => setSelectedEmployee(null)}
+      />
+
+      {/* Modal Guardar Estudio Actuarial */}
+      <SaveStudyModal
+        isOpen={isSaveStudyOpen}
+        onClose={() => setIsSaveStudyOpen(false)}
+        empresa={empresa}
+        resumen={resumen}
+        variables={variables}
+        censoInput={censusInput}
+        onEstudioGuardado={(estudioId) => {
+          setActiveTab('estudios');
+        }}
+      />
+
+      {/* Hub de Conexión Móvil y APIs REST */}
+      <MobileApiModal
+        isOpen={isMobileApiOpen}
+        onClose={() => setIsMobileApiOpen(false)}
       />
 
     </div>

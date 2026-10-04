@@ -16,8 +16,7 @@ import { EmpleadoProcesado, ResumenMotor, VariablesMacro, DatosEmpresaEstudio } 
 
 /**
  * Generador del Estudio Actuarial Completo en Formato Word (.docx)
- * Estructura idéntica al informe formal pericial de CAJAMARCA PROTECTIVE SERVICES
- * Conforme al Código del Trabajo del Ecuador (Art. 185 y 216), Acuerdos MDT y NIC 19 / IAS 19
+ * Estructura formal pericial conforme al Código del Trabajo del Ecuador (Art. 185 y 216), Acuerdos MDT y NIC 19 / IAS 19
  */
 export async function generarEstudioWord(
   resultados: EmpleadoProcesado[],
