@@ -1,75 +1,128 @@
 export interface LoginBrandConfig {
   tituloMarca: string;
   subtituloMarca: string;
-  estiloDegradado: 'azul_corporativo' | 'rojo_infinity' | 'purpura_finnova' | 'esmeralda_financiero' | 'oscuro_minimalista';
-  estiloImagen: 'ciudad_nocturna' | 'rascacielos' | 'arquitectura_cristal' | 'geometrico' | 'degradado_puro';
+  tipoFondo: 'degradado' | 'imagen' | 'ambos';
+  estiloDegradado: 'rojo_infinity' | 'azul_corporativo' | 'purpura_finnova' | 'esmeralda_financiero' | 'oscuro_minimalista' | 'borgona_oro' | 'personalizado';
+  colorInicioPersonalizado?: string;
+  colorFinPersonalizado?: string;
+  estiloImagen: 'ciudad_nocturna' | 'rascacielos' | 'arquitectura_cristal' | 'geometrico' | 'sala_directorio' | 'abstracto_financiero' | 'degradado_puro' | 'personalizada';
   imagenUrlPersonalizada?: string;
+  fondoPantallaCompleta: boolean;
+  opacidadFondo: number;
+  desenfoqueFondo: 'ninguno' | 'suave' | 'medio' | 'fuerte';
   mostrarInsignias: boolean;
 }
 
 const STORAGE_LOGIN_BRAND_KEY = 'SISTEMA_ACTUARIAL_LOGIN_BRAND_CONFIG_V1';
 
-export const DEGRADADOS_PRESETS: Record<string, { nombre: string; cssGradient: string; badgeColor: string; buttonColor: string }> = {
-  azul_corporativo: {
-    nombre: 'Azul Corporativo / Navy (Predeterminado)',
-    cssGradient: 'linear-gradient(135deg, #0a192f 0%, #1e3a8a 50%, #0284c7 100%)',
-    badgeColor: 'bg-blue-500/20 text-blue-200 border-blue-400/30',
-    buttonColor: 'bg-blue-700 hover:bg-blue-800'
-  },
+export const DEGRADADOS_PRESETS: Record<string, { 
+  nombre: string; 
+  cssGradient: string; 
+  badgeColor: string; 
+  buttonColor: string; 
+  accentColor: string;
+  previewColors: [string, string];
+}> = {
   rojo_infinity: {
-    nombre: 'Rojo Corporativo Infinity (Estilo login.jpg)',
+    nombre: 'Rojo Corporativo Infinity (Elegante & Institucional)',
     cssGradient: 'linear-gradient(135deg, #4c0519 0%, #9f1239 40%, #e11d48 75%, #f43f5e 100%)',
     badgeColor: 'bg-rose-500/20 text-rose-200 border-rose-400/30',
-    buttonColor: 'bg-rose-600 hover:bg-rose-700'
+    buttonColor: 'bg-rose-600 hover:bg-rose-700',
+    accentColor: '#e11d48',
+    previewColors: ['#4c0519', '#f43f5e']
+  },
+  azul_corporativo: {
+    nombre: 'Azul Marino Corporativo / Navy Clásico',
+    cssGradient: 'linear-gradient(135deg, #0a192f 0%, #1e3a8a 50%, #0284c7 100%)',
+    badgeColor: 'bg-blue-500/20 text-blue-200 border-blue-400/30',
+    buttonColor: 'bg-blue-700 hover:bg-blue-800',
+    accentColor: '#2563eb',
+    previewColors: ['#0a192f', '#0284c7']
   },
   purpura_finnova: {
-    nombre: 'Púrpura Finnova / Royal Indigo (Estilo Dashboard Finnova)',
+    nombre: 'Púrpura Finnova / Royal Indigo Ejecutivo',
     cssGradient: 'linear-gradient(135deg, #181928 0%, #312e81 40%, #4f46e5 80%, #6366f1 100%)',
     badgeColor: 'bg-indigo-500/20 text-indigo-200 border-indigo-400/30',
-    buttonColor: 'bg-indigo-600 hover:bg-indigo-700'
+    buttonColor: 'bg-indigo-600 hover:bg-indigo-700',
+    accentColor: '#5b52f9',
+    previewColors: ['#181928', '#6366f1']
   },
   esmeralda_financiero: {
-    nombre: 'Verde Esmeralda Financiero',
+    nombre: 'Verde Esmeralda Financiero & Auditoría',
     cssGradient: 'linear-gradient(135deg, #064e3b 0%, #047857 50%, #10b981 100%)',
     badgeColor: 'bg-emerald-500/20 text-emerald-200 border-emerald-400/30',
-    buttonColor: 'bg-emerald-700 hover:bg-emerald-800'
+    buttonColor: 'bg-emerald-700 hover:bg-emerald-800',
+    accentColor: '#059669',
+    previewColors: ['#064e3b', '#10b981']
   },
   oscuro_minimalista: {
-    nombre: 'Dark Slate Minimalista',
+    nombre: 'Dark Slate Minimalista / Medianoche Deep',
     cssGradient: 'linear-gradient(135deg, #090d16 0%, #1e293b 50%, #334155 100%)',
     badgeColor: 'bg-slate-500/20 text-slate-200 border-slate-400/30',
-    buttonColor: 'bg-slate-800 hover:bg-slate-700'
+    buttonColor: 'bg-slate-800 hover:bg-slate-700',
+    accentColor: '#334155',
+    previewColors: ['#090d16', '#334155']
+  },
+  borgona_oro: {
+    nombre: 'Borgoña & Oro Presidencial',
+    cssGradient: 'linear-gradient(135deg, #3b0764 0%, #701a75 50%, #b45309 100%)',
+    badgeColor: 'bg-amber-500/20 text-amber-200 border-amber-400/30',
+    buttonColor: 'bg-purple-800 hover:bg-purple-900',
+    accentColor: '#d97706',
+    previewColors: ['#3b0764', '#b45309']
   }
 };
 
-export const FONDOS_IMAGENES_PRESETS: Record<string, { nombre: string; url: string }> = {
+export const FONDOS_IMAGENES_PRESETS: Record<string, { nombre: string; url: string; descripcion: string }> = {
   ciudad_nocturna: {
-    nombre: 'Ciudad & Metrópolis Nocturna (login.jpg)',
-    url: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?q=80&w=1200&auto=format&fit=crop'
+    nombre: 'Metrópolis Nocturna & Luces Financieras',
+    url: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?q=80&w=1600&auto=format&fit=crop',
+    descripcion: 'Vista aérea de rascacielos con iluminación nocturna dorada y azul'
   },
   rascacielos: {
-    nombre: 'Torres Corporativas & Rascacielos',
-    url: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1200&auto=format&fit=crop'
+    nombre: 'Torres Corporativas & Rascacielos al Atardecer',
+    url: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1600&auto=format&fit=crop',
+    descripcion: 'Fachada vertical de arquitectura financiera moderna'
   },
   arquitectura_cristal: {
-    nombre: 'Arquitectura Financiera de Cristal',
-    url: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=1200&auto=format&fit=crop'
+    nombre: 'Edificio Financiero de Cristal & Estructura',
+    url: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=1600&auto=format&fit=crop',
+    descripcion: 'Vidrio templado e ingeniería corporativa de vanguardia'
   },
   geometrico: {
-    nombre: 'Textura Geométrica Abstracta',
-    url: ''
+    nombre: 'Espacio Ejecutivo & Modernidad',
+    url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1600&auto=format&fit=crop',
+    descripcion: 'Espacio de trabajo sobrio y contemporáneo'
+  },
+  sala_directorio: {
+    nombre: 'Directorio Ejecutivo & Salón Corporativo',
+    url: 'https://images.unsplash.com/photo-1431540015161-0bf868a2d407?q=80&w=1600&auto=format&fit=crop',
+    descripcion: 'Sala de juntas de alta dirección y toma de decisiones'
+  },
+  abstracto_financiero: {
+    nombre: 'Textura Futurista de Datos & Luces',
+    url: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1600&auto=format&fit=crop',
+    descripcion: 'Líneas de conexión global y tecnología'
   },
   degradado_puro: {
     nombre: 'Degradado Puro (Sin fotografía)',
-    url: ''
+    url: '',
+    descripcion: 'Fondo limpio con color de degradado sólido'
   }
 };
 
 export const DEFAULT_LOGIN_BRAND_CONFIG: LoginBrandConfig = {
   tituloMarca: 'INFINITY ACTUARIAL',
   subtituloMarca: 'Plataforma actuarial certificada para la valoración de pasivos laborales bajo la Norma Internacional de Contabilidad NIC 19 y el Código del Trabajo del Ecuador.',
-  estiloDegradado: 'rojo_infinity', // Coincide con la imagen login.jpg enviada por el usuario
-  estiloImagen: 'ciudad_nocturna',  // Coincide con la imagen login.jpg
+  tipoFondo: 'ambos',
+  estiloDegradado: 'rojo_infinity',
+  colorInicioPersonalizado: '#4c0519',
+  colorFinPersonalizado: '#f43f5e',
+  estiloImagen: 'ciudad_nocturna',
+  imagenUrlPersonalizada: '',
+  fondoPantallaCompleta: true,
+  opacidadFondo: 0.50,
+  desenfoqueFondo: 'suave',
   mostrarInsignias: true
 };
 
@@ -88,6 +141,7 @@ export function obtenerLoginBrandConfig(): LoginBrandConfig {
 export function guardarLoginBrandConfig(config: LoginBrandConfig): void {
   try {
     localStorage.setItem(STORAGE_LOGIN_BRAND_KEY, JSON.stringify(config));
+    window.dispatchEvent(new CustomEvent('login-brand-config-updated', { detail: config }));
   } catch (e) {
     console.error('Error al guardar configuración de marca login:', e);
   }

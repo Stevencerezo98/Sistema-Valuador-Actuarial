@@ -1,14 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
-import { KpiCards } from './components/KpiCards';
-import { EmployeeTable } from './components/EmployeeTable';
 import { EmptyStateDropzone } from './components/EmptyStateDropzone';
 import { NiifReportView } from './components/NiifReportView';
 import { DatabaseSchemaView } from './components/DatabaseSchemaView';
 import { PythonScriptView } from './components/PythonScriptView';
 import { LegalMethodology } from './components/LegalMethodology';
-import { ActuarialCharts } from './components/ActuarialCharts';
 import { MortalityTablesView } from './components/MortalityTablesView';
 import { EmployeeDetailModal } from './components/EmployeeDetailModal';
 import { UploadModal } from './components/UploadModal';
@@ -23,7 +20,6 @@ import { MobileApiModal } from './components/MobileApiModal';
 import { LoginBrandConfigModal } from './components/LoginBrandConfigModal';
 import { FinnovaActuaryDashboard } from './components/FinnovaActuaryDashboard';
 import { getInitialTheme, applyTheme, ThemeMode } from './services/themeService';
-import { CENSO_INICIAL_ACTUARIAL } from './data/defaultCensus';
 import { enviarNotificacionCorreoActuario } from './services/notificationService';
 
 import { 
@@ -95,8 +91,8 @@ export default function App() {
     }
   }, [activeTab, rolActual, permisos]);
 
-  // Censo Actuarial Oficial para visualización inmediata en Dashboard Actuario/Admin
-  const [censusInput, setCensusInput] = useState<EmpleadoInput[]>(() => CENSO_INICIAL_ACTUARIAL);
+  // Censo Actuarial de Nómina (Inicia vacío: sin datos de prueba ni datos falsos)
+  const [censusInput, setCensusInput] = useState<EmpleadoInput[]>([]);
   const [variables, setVariables] = useState<VariablesMacro>(DEFAULT_VARIABLES_MACRO);
 
   // Modales
@@ -157,7 +153,7 @@ export default function App() {
     }
   }, [usuarioActivo]);
 
-  // Procesamiento del motor actuarial
+  // Procesamiento del motor actuarial: Exclusivamente sobre los datos de nómina cargados
   const { resultados, resumen } = useMemo(() => {
     return procesarMotorActuarial(censusInput, variables);
   }, [censusInput, variables]);
@@ -387,48 +383,22 @@ export default function App() {
                 />
               )
             ) : (
-              // VISTA PARA ACTUARIO / ADMINISTRADOR
-              censusInput.length === 0 ? (
-                <EmptyStateDropzone
-                  onLoadData={handleLoadData}
-                  onOpenVariables={() => setIsVariablesOpen(true)}
-                  variables={variables}
-                  rolActual={rolActual}
-                  nombreEmpresa={empresa.nombre_empresa}
-                />
-              ) : (
-                <div className="space-y-6">
-                  {/* Dashboard Ejecutivo Estilo Finnova (Para Actuario y Superadmin) */}
-                  <FinnovaActuaryDashboard
-                    resultados={resultados}
-                    resumen={resumen}
-                    variables={variables}
-                    empresa={empresa}
-                    rolActual={rolActual}
-                    onOpenUpload={() => setIsUploadOpen(true)}
-                    onOpenSaveStudy={() => setIsSaveStudyOpen(true)}
-                    onOpenEmployeeDetail={(emp) => setSelectedEmployee(emp)}
-                    onNavigateTab={(tab) => setActiveTab(tab)}
-                    onExportExcel={() => exportarResultadosAExcel(resultados, resumen, variables, sensibilidad)}
-                    theme={theme}
-                  />
-
-                  {/* Gráficos Interactivos Recharts */}
-                  <div className={`p-5 rounded-3xl border transition-colors ${
-                    theme === 'oscuro' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/90'
-                  } shadow-xs`}>
-                    <div className="mb-3 flex items-center justify-between">
-                      <h3 className="text-sm font-bold tracking-tight">
-                        Curvas Actuariales y Distribución Demográfica
-                      </h3>
-                      <span className="text-xs text-slate-400">
-                        Visualización Gráfica NIIF
-                      </span>
-                    </div>
-                    <ActuarialCharts resultados={resultados} variables={variables} />
-                  </div>
-                </div>
-              )
+              // VISTA PARA ACTUARIO / ADMINISTRADOR (Dashboard Ejecutivo Moderno Estilo Finnova)
+              <FinnovaActuaryDashboard
+                resultados={resultados}
+                resumen={resumen}
+                variables={variables}
+                empresa={empresa}
+                rolActual={rolActual}
+                onOpenUpload={() => setIsUploadOpen(true)}
+                onOpenSaveStudy={() => setIsSaveStudyOpen(true)}
+                onOpenEmployeeDetail={(emp) => setSelectedEmployee(emp)}
+                onExportExcel={() => exportarResultadosAExcel(resultados, resumen, variables, sensibilidad)}
+                onOpenLoginBrandConfig={() => setIsLoginBrandOpen(true)}
+                onOpenCompanyConfig={() => setIsCompanyConfigOpen(true)}
+                onLimpiarDatos={handleClearData}
+                theme={theme}
+              />
             )
           )}
 
@@ -470,6 +440,7 @@ export default function App() {
               onCambiarRol={handleCambiarRolActivo}
               empresa={empresa}
               onPermisosActualizados={() => setPermisosVersion(v => v + 1)}
+              onOpenLoginBrandConfig={() => setIsLoginBrandOpen(true)}
             />
           )}
 
@@ -554,6 +525,14 @@ export default function App() {
       <MobileApiModal
         isOpen={isMobileApiOpen}
         onClose={() => setIsMobileApiOpen(false)}
+      />
+
+      {/* Modal de Personalización de Marca y Login para Administrador */}
+      <LoginBrandConfigModal
+        isOpen={isLoginBrandOpen}
+        onClose={() => setIsLoginBrandOpen(false)}
+        onConfigSaved={() => {}}
+        onCerrarSesion={handleCerrarSesion}
       />
 
     </div>

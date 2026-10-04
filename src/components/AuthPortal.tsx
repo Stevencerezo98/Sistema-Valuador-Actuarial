@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { 
   obtenerLoginBrandConfig, 
+  DEFAULT_LOGIN_BRAND_CONFIG,
   DEGRADADOS_PRESETS, 
   FONDOS_IMAGENES_PRESETS 
 } from '../services/loginBrandService';
@@ -55,9 +56,28 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onLoginSuccess }) => {
   };
 
   // Configuración de Marca y Fondo de Login (personalizable por el Administrador)
-  const [brandConfig] = useState(() => obtenerLoginBrandConfig());
+  const [brandConfig, setBrandConfig] = useState(() => obtenerLoginBrandConfig());
+
+  useEffect(() => {
+    const handleUpdate = (e: any) => {
+      if (e.detail) {
+        setBrandConfig(e.detail);
+      } else {
+        setBrandConfig(obtenerLoginBrandConfig());
+      }
+    };
+    window.addEventListener('login-brand-config-updated', handleUpdate);
+    return () => window.removeEventListener('login-brand-config-updated', handleUpdate);
+  }, []);
+
   const preset = DEGRADADOS_PRESETS[brandConfig.estiloDegradado] || DEGRADADOS_PRESETS.rojo_infinity;
-  const bgImagenUrl = brandConfig.imagenUrlPersonalizada || FONDOS_IMAGENES_PRESETS[brandConfig.estiloImagen]?.url || '';
+  const currentGradient = brandConfig.estiloDegradado === 'personalizado'
+    ? `linear-gradient(135deg, ${brandConfig.colorInicioPersonalizado || '#4c0519'} 0%, ${brandConfig.colorFinPersonalizado || '#f43f5e'} 100%)`
+    : preset.cssGradient;
+
+  const bgImagenUrl = brandConfig.estiloImagen === 'personalizada'
+    ? brandConfig.imagenUrlPersonalizada || ''
+    : (brandConfig.imagenUrlPersonalizada || FONDOS_IMAGENES_PRESETS[brandConfig.estiloImagen]?.url || '');
 
   // Login State
   const [identificador, setIdentificador] = useState('');
@@ -167,19 +187,53 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onLoginSuccess }) => {
     }, 1500);
   };
 
+  const blurClass = 
+    brandConfig.desenfoqueFondo === 'fuerte' ? 'backdrop-blur-md' :
+    brandConfig.desenfoqueFondo === 'medio' ? 'backdrop-blur-sm' :
+    brandConfig.desenfoqueFondo === 'suave' ? 'backdrop-blur-xs' : '';
+
   return (
-    <div className={`min-h-screen flex items-center justify-center p-4 sm:p-6 transition-colors duration-200 ${
-      theme === 'oscuro' ? 'bg-slate-950 text-slate-100' : 'bg-slate-100/90 text-slate-800'
-    }`}>
-      
+    <div 
+      className="min-h-screen bg-slate-950 flex items-center justify-center p-4 sm:p-6 relative overflow-hidden font-sans selection:bg-rose-500 selection:text-white"
+    >
+      {/* 1. Fondo de Pantalla Completa: Imagen o Color Degradado configurable desde el Dashboard */}
+      {brandConfig.fondoPantallaCompleta && (
+        <div className="absolute inset-0 pointer-events-none z-0">
+          {/* Capa de Color Degradado de Base */}
+          <div 
+            className="absolute inset-0 transition-all duration-500"
+            style={{ 
+              background: currentGradient,
+              opacity: (brandConfig.tipoFondo === 'imagen' && bgImagenUrl) ? 0.35 : 1
+            }}
+          />
+
+          {/* Capa de Fotografía / Textura en Pantalla Completa */}
+          {bgImagenUrl && (brandConfig.tipoFondo === 'imagen' || brandConfig.tipoFondo === 'ambos') && (
+            <div 
+              className="absolute inset-0 bg-cover bg-center transition-all duration-500"
+              style={{ 
+                backgroundImage: `url(${bgImagenUrl})`,
+                opacity: brandConfig.opacidadFondo ?? 0.50,
+                mixBlendMode: brandConfig.tipoFondo === 'ambos' ? 'overlay' : 'normal'
+              }}
+            />
+          )}
+
+          {/* Viñeta oscura radial y máscara para máximo contraste del formulario */}
+          <div className={`absolute inset-0 bg-black/45 ${blurClass}`} />
+          <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:20px_20px]" />
+        </div>
+      )}
+
       {/* Botón flotante para alternar Tema Claro / Oscuro */}
-      <div className="fixed top-5 right-5 z-20">
+      <div className="fixed top-5 right-5 z-30">
         <button
           onClick={toggleTheme}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold shadow-md border transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold shadow-lg border backdrop-blur-md transition-all cursor-pointer ${
             theme === 'oscuro' 
-              ? 'bg-slate-900 border-slate-700 text-amber-400 hover:bg-slate-800' 
-              : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
+              ? 'bg-slate-900/90 border-slate-700 text-amber-400 hover:bg-slate-800' 
+              : 'bg-white/90 border-slate-200 text-slate-700 hover:bg-white'
           }`}
           title="Cambiar tema de la interfaz"
         >
@@ -198,10 +252,10 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onLoginSuccess }) => {
       </div>
 
       {/* Contenedor Principal Split (Estilo login.jpg) */}
-      <div className={`w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 border transition-colors duration-200 ${
+      <div className={`w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 border relative z-10 backdrop-blur-xs transition-colors duration-200 ${
         theme === 'oscuro' 
-          ? 'bg-slate-900 border-slate-800' 
-          : 'bg-white border-slate-200/90'
+          ? 'bg-slate-900/95 border-slate-700/80 shadow-black/60' 
+          : 'bg-white/95 border-white/60 shadow-2xl'
       }`}>
         
         {/* PANEL IZQUIERDO: FORMULARIO CORPORATIVO */}
@@ -514,7 +568,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onLoginSuccess }) => {
         {/* PANEL DERECHO: BRANDING CORPORATIVO INSTITUCIONAL (Estilo login.jpg) */}
         <div 
           className="lg:col-span-6 text-white p-8 sm:p-12 flex flex-col justify-between relative overflow-hidden transition-all duration-300"
-          style={{ background: preset.cssGradient }}
+          style={{ background: currentGradient }}
         >
           {/* Fotografía / Textura de fondo configurada por el Administrador */}
           {bgImagenUrl && (

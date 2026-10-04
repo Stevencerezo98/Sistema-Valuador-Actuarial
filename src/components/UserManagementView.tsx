@@ -44,7 +44,8 @@ import {
   Save,
   ShieldAlert,
   ChevronRight,
-  Settings
+  Settings,
+  Palette
 } from 'lucide-react';
 
 interface UserManagementViewProps {
@@ -52,13 +53,15 @@ interface UserManagementViewProps {
   onCambiarRol: (nuevoRol: RolUsuario) => void;
   empresa: DatosEmpresaEstudio;
   onPermisosActualizados?: () => void;
+  onOpenLoginBrandConfig?: () => void;
 }
 
 export const UserManagementView: React.FC<UserManagementViewProps> = ({
   rolActual,
   onCambiarRol,
   empresa,
-  onPermisosActualizados
+  onPermisosActualizados,
+  onOpenLoginBrandConfig
 }) => {
   // SEGURIDAD: Solo el Super Administrador puede ver y operar este módulo
   if (rolActual !== 'admin') {
@@ -381,6 +384,18 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {onOpenLoginBrandConfig && (
+              <button
+                type="button"
+                onClick={onOpenLoginBrandConfig}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-bold text-xs shadow-xs transition-all cursor-pointer"
+                title="Personalizar imagen de fondo, degradado y títulos de la pantalla de Login"
+              >
+                <Palette className="w-4 h-4 text-purple-600" />
+                <span>Personalizar Login</span>
+              </button>
+            )}
+
             <button
               onClick={() => setModalNuevoUsuarioOpen(true)}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-medium text-xs shadow-xs transition-all cursor-pointer"
