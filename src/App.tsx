@@ -528,12 +528,14 @@ export default function App() {
       />
 
       {/* Modal de Personalización de Marca y Login para Administrador */}
-      <LoginBrandConfigModal
-        isOpen={isLoginBrandOpen}
-        onClose={() => setIsLoginBrandOpen(false)}
-        onConfigSaved={() => {}}
-        onCerrarSesion={handleCerrarSesion}
-      />
+      {rolActual === 'admin' && (
+        <LoginBrandConfigModal
+          isOpen={isLoginBrandOpen}
+          onClose={() => setIsLoginBrandOpen(false)}
+          onConfigSaved={() => {}}
+          onCerrarSesion={handleCerrarSesion}
+        />
+      )}
 
     </div>
   );

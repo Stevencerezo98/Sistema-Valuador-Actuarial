@@ -127,7 +127,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Center / Right: Executive Action Buttons */}
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           
-          {canEditCompany && (
+          {activeTab !== 'dashboard' && canEditCompany && (
             <button
               onClick={onOpenCompanyConfig}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition cursor-pointer"
@@ -149,7 +149,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {canUpload && (
+          {activeTab !== 'dashboard' && canUpload && (
             <button
               onClick={onOpenUpload}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
@@ -161,8 +161,8 @@ export const Header: React.FC<HeaderProps> = ({
 
           {hasData && (
             <>
-              {/* Botón Guardar Estudio para Actuario / Admin */}
-              {canSaveStudy && onOpenSaveStudy && (
+              {/* Botón Guardar Estudio para Actuario / Admin cuando está en otros módulos */}
+              {canSaveStudy && onOpenSaveStudy && activeTab !== 'dashboard' && (
                 <button
                   onClick={onOpenSaveStudy}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
@@ -197,7 +197,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
               )}
 
-              {canExcel && (
+              {canExcel && activeTab !== 'dashboard' && (
                 <button
                   onClick={() => exportarResultadosAExcel(resultados, resumen, variables, sensibilidad)}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
@@ -208,14 +208,16 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
               )}
 
-              <button
-                onClick={onClearData}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 text-xs font-medium transition cursor-pointer"
-                title="Limpiar datos cargados"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Limpiar</span>
-              </button>
+              {activeTab !== 'dashboard' && (
+                <button
+                  onClick={onClearData}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 text-xs font-medium transition cursor-pointer"
+                  title="Limpiar datos cargados"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Limpiar</span>
+                </button>
+              )}
             </>
           )}
 

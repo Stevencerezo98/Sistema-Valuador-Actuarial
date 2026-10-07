@@ -1,6 +1,32 @@
 export interface LoginBrandConfig {
-  tituloMarca: string;
-  subtituloMarca: string;
+  // --- Textos del Panel Izquierdo (Formulario) ---
+  textoBienvenida: string; // ej. "WELCOME TO"
+  tituloFormulario: string; // ej. "VALUADOR ACTUARIAL"
+  subtituloFormulario: string; // ej. "Portal Institucional de Nómina y Provisiones Laborales Ecuador · NIC 19"
+  textoTabLogin: string; // ej. "Iniciar Sesión"
+  textoTabRegistro: string; // ej. "Registrar Empresa"
+  textoBotonLogin: string; // ej. "Ingresar al Portal"
+
+  // --- Textos del Panel Derecho (Banner Institucional) ---
+  badgeSuperior: string; // ej. "Certificación Oficial NIC 19"
+  etiquetaSuperiorDerecha: string; // ej. "Ecuador 2026"
+  tituloMarca: string; // ej. "INFINITY ACTUARIAL"
+  subtituloMarca: string; // ej. "Plataforma actuarial certificada..."
+  
+  // --- Pie de 3 columnas del Banner ---
+  pieCol1Titulo: string; // ej. "Art. 185"
+  pieCol1Subtitulo: string; // ej. "Desahucio"
+  pieCol2Titulo: string; // ej. "Art. 216"
+  pieCol2Subtitulo: string; // ej. "Jubilación"
+  pieCol3Titulo: string; // ej. "NIIF / IFRS"
+  pieCol3Subtitulo: string; // ej. "PUCM & DBO"
+
+  // --- Logotipo e Íconos ---
+  tipoLogo: 'icono' | 'imagen';
+  iconoSeleccionado: 'infinity' | 'shield' | 'building' | 'award' | 'calculator' | 'trending';
+  logoUrlPersonalizado?: string; // Data URL o URL web
+
+  // --- Fondo & Estilo Visual ---
   tipoFondo: 'degradado' | 'imagen' | 'ambos';
   estiloDegradado: 'rojo_infinity' | 'azul_corporativo' | 'purpura_finnova' | 'esmeralda_financiero' | 'oscuro_minimalista' | 'borgona_oro' | 'personalizado';
   colorInicioPersonalizado?: string;
@@ -10,10 +36,14 @@ export interface LoginBrandConfig {
   fondoPantallaCompleta: boolean;
   opacidadFondo: number;
   desenfoqueFondo: 'ninguno' | 'suave' | 'medio' | 'fuerte';
-  mostrarInsignias: boolean;
+  colorBotonFormulario: 'auto' | 'azul' | 'rojo' | 'purpura' | 'esmeralda' | 'negro';
+
+  // --- Marca en Dashboard ---
+  tituloDashboard: string; // ej. "VALUADOR ACTUARIAL"
+  subtituloDashboard: string; // ej. "Ecuador · NIC 19 & Código del Trabajo"
 }
 
-const STORAGE_LOGIN_BRAND_KEY = 'SISTEMA_ACTUARIAL_LOGIN_BRAND_CONFIG_V1';
+const STORAGE_LOGIN_BRAND_KEY = 'SISTEMA_ACTUARIAL_LOGIN_BRAND_CONFIG_V2';
 
 export const DEGRADADOS_PRESETS: Record<string, { 
   nombre: string; 
@@ -43,7 +73,7 @@ export const DEGRADADOS_PRESETS: Record<string, {
     nombre: 'Púrpura Finnova / Royal Indigo Ejecutivo',
     cssGradient: 'linear-gradient(135deg, #181928 0%, #312e81 40%, #4f46e5 80%, #6366f1 100%)',
     badgeColor: 'bg-indigo-500/20 text-indigo-200 border-indigo-400/30',
-    buttonColor: 'bg-indigo-600 hover:bg-indigo-700',
+    buttonColor: 'bg-[#5b52f9] hover:bg-[#4f46e5]',
     accentColor: '#5b52f9',
     previewColors: ['#181928', '#6366f1']
   },
@@ -112,8 +142,34 @@ export const FONDOS_IMAGENES_PRESETS: Record<string, { nombre: string; url: stri
 };
 
 export const DEFAULT_LOGIN_BRAND_CONFIG: LoginBrandConfig = {
+  // Panel Izquierdo (Formulario)
+  textoBienvenida: 'WELCOME TO',
+  tituloFormulario: 'VALUADOR ACTUARIAL',
+  subtituloFormulario: 'Portal Institucional de Nómina y Provisiones Laborales Ecuador · NIC 19',
+  textoTabLogin: 'Iniciar Sesión',
+  textoTabRegistro: 'Registrar Empresa',
+  textoBotonLogin: 'Ingresar al Portal',
+
+  // Panel Derecho (Banner)
+  badgeSuperior: 'Certificación Oficial NIC 19',
+  etiquetaSuperiorDerecha: 'Ecuador 2026',
   tituloMarca: 'INFINITY ACTUARIAL',
   subtituloMarca: 'Plataforma actuarial certificada para la valoración de pasivos laborales bajo la Norma Internacional de Contabilidad NIC 19 y el Código del Trabajo del Ecuador.',
+  
+  // Pie de 3 columnas del Banner
+  pieCol1Titulo: 'Art. 185',
+  pieCol1Subtitulo: 'Desahucio',
+  pieCol2Titulo: 'Art. 216',
+  pieCol2Subtitulo: 'Jubilación',
+  pieCol3Titulo: 'NIIF / IFRS',
+  pieCol3Subtitulo: 'PUCM & DBO',
+
+  // Logotipo
+  tipoLogo: 'icono',
+  iconoSeleccionado: 'infinity',
+  logoUrlPersonalizado: '',
+
+  // Fondo & Colores
   tipoFondo: 'ambos',
   estiloDegradado: 'rojo_infinity',
   colorInicioPersonalizado: '#4c0519',
@@ -123,7 +179,11 @@ export const DEFAULT_LOGIN_BRAND_CONFIG: LoginBrandConfig = {
   fondoPantallaCompleta: true,
   opacidadFondo: 0.50,
   desenfoqueFondo: 'suave',
-  mostrarInsignias: true
+  colorBotonFormulario: 'auto',
+
+  // Dashboard
+  tituloDashboard: 'VALUADOR ACTUARIAL',
+  subtituloDashboard: 'Ecuador · NIC 19 & Código del Trabajo'
 };
 
 export function obtenerLoginBrandConfig(): LoginBrandConfig {
@@ -131,6 +191,11 @@ export function obtenerLoginBrandConfig(): LoginBrandConfig {
     const raw = localStorage.getItem(STORAGE_LOGIN_BRAND_KEY);
     if (raw) {
       return { ...DEFAULT_LOGIN_BRAND_CONFIG, ...JSON.parse(raw) };
+    }
+    // Fallback retrocompatible con V1 si existía
+    const rawV1 = localStorage.getItem('SISTEMA_ACTUARIAL_LOGIN_BRAND_CONFIG_V1');
+    if (rawV1) {
+      return { ...DEFAULT_LOGIN_BRAND_CONFIG, ...JSON.parse(rawV1) };
     }
   } catch (e) {
     console.error('Error al obtener configuración de marca login:', e);

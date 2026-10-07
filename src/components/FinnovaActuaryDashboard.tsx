@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   EmpleadoProcesado, 
   ResumenMotor, 
@@ -8,6 +8,7 @@ import {
 } from '../types/actuarial';
 import { generarFichaActuarialPDF } from '../services/pdfReportGenerator';
 import { descargarPlantillaOficial } from '../services/actuarialEngine';
+import { obtenerLoginBrandConfig } from '../services/loginBrandService';
 import { ActuarialCharts } from './ActuarialCharts';
 import { 
   Calendar, 
@@ -62,6 +63,18 @@ export const FinnovaActuaryDashboard: React.FC<FinnovaActuaryDashboardProps> = (
   onLimpiarDatos,
   theme = 'claro'
 }) => {
+  // Configuración de Marca y Dashboard
+  const [brandConfig, setBrandConfig] = useState(() => obtenerLoginBrandConfig());
+
+  useEffect(() => {
+    const handleUpdate = (e: any) => {
+      if (e.detail) setBrandConfig(e.detail);
+      else setBrandConfig(obtenerLoginBrandConfig());
+    };
+    window.addEventListener('login-brand-config-updated', handleUpdate);
+    return () => window.removeEventListener('login-brand-config-updated', handleUpdate);
+  }, []);
+
   // Estado local para búsqueda, filtros y modo de vista
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<'todos' | 'elegibles' | 'desahucio'>('todos');
@@ -156,7 +169,7 @@ export const FinnovaActuaryDashboard: React.FC<FinnovaActuaryDashboardProps> = (
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-                {empresa.nombre_empresa || 'Valuador Actuarial NIC 19'}
+                {brandConfig.tituloDashboard || empresa.nombre_empresa || 'Valuador Actuarial NIC 19'}
               </h1>
               <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
                 tieneDatos 
@@ -167,7 +180,7 @@ export const FinnovaActuaryDashboard: React.FC<FinnovaActuaryDashboardProps> = (
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              RUC: <strong className="font-mono text-slate-700 dark:text-slate-300">{empresa.ruc || '1790000000001'}</strong> · Valuación bajo Código del Trabajo (Art. 185 y 216) y NIIF / IFRS
+              RUC: <strong className="font-mono text-slate-700 dark:text-slate-300">{empresa.ruc || '1790000000001'}</strong> · {brandConfig.subtituloDashboard || 'Valuación bajo Código del Trabajo (Art. 185 y 216) y NIIF / IFRS'}
             </p>
           </div>
         </div>

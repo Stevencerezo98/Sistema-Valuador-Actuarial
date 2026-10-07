@@ -47,6 +47,7 @@ import {
   Settings,
   Palette
 } from 'lucide-react';
+import { obtenerLoginBrandConfig } from '../services/loginBrandService';
 
 interface UserManagementViewProps {
   rolActual: RolUsuario;
@@ -63,6 +64,16 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
   onPermisosActualizados,
   onOpenLoginBrandConfig
 }) => {
+  const [brandConfig, setBrandConfig] = useState(() => obtenerLoginBrandConfig());
+
+  useEffect(() => {
+    const handleUpdate = (e: any) => {
+      if (e.detail) setBrandConfig(e.detail);
+      else setBrandConfig(obtenerLoginBrandConfig());
+    };
+    window.addEventListener('login-brand-config-updated', handleUpdate);
+    return () => window.removeEventListener('login-brand-config-updated', handleUpdate);
+  }, []);
   // SEGURIDAD: Solo el Super Administrador puede ver y operar este módulo
   if (rolActual !== 'admin') {
     return (
@@ -885,6 +896,84 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
 
           <div className="text-[11px] text-slate-600 bg-white p-2.5 rounded-lg border border-slate-200 max-w-sm">
             💡 <strong>Compatibilidad inteligente:</strong> El motor lee automáticamente columnas de Cédula, Nombres, Sexo, Fechas o Edad/Antigüedad, y Sueldo Total.
+          </div>
+        </div>
+      </div>
+
+      {/* SECCIÓN: Personalización Institucional de Marca, Login y Dashboard (Exclusivo Administrador) */}
+      <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#5b52f9] to-[#7c3aed] text-white flex items-center justify-center shadow-xs shrink-0">
+              <Palette className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                  Personalización de Marca, Login y Dashboard
+                </h3>
+                <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-[10px] font-bold">
+                  Exclusivo Super Admin
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Configure la imagen de fondo, colores degradados, monograma institucional y todos los textos del portal de acceso.
+              </p>
+            </div>
+          </div>
+
+          {onOpenLoginBrandConfig && (
+            <button
+              type="button"
+              onClick={onOpenLoginBrandConfig}
+              className="px-4 py-2 rounded-xl bg-[#5b52f9] hover:bg-[#4f46e5] text-white font-bold text-xs shadow-md shadow-[#5b52f9]/20 transition cursor-pointer flex items-center gap-2 shrink-0"
+            >
+              <Palette className="w-4 h-4" />
+              <span>Editar Fondo, Colores y Textos</span>
+            </button>
+          )}
+        </div>
+
+        {/* Resumen de la Configuración Activa */}
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-1">
+          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
+            <span className="text-[10px] font-bold text-slate-400 uppercase block">Fondo de Login Activo</span>
+            <span className="text-xs font-bold text-slate-900 mt-1 block capitalize">
+              {brandConfig.tipoFondo === 'ambos' ? 'Híbrido (Degradado + Imagen)' : brandConfig.tipoFondo}
+            </span>
+            <span className="text-[10px] text-slate-500 block truncate mt-0.5">
+              Degradado: {brandConfig.estiloDegradado}
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
+            <span className="text-[10px] font-bold text-slate-400 uppercase block">Monograma / Marca Banner</span>
+            <span className="text-xs font-bold text-slate-900 mt-1 block truncate">
+              {brandConfig.tituloMarca || 'INFINITY ACTUARIAL'}
+            </span>
+            <span className="text-[10px] text-slate-500 block truncate mt-0.5">
+              Badge: {brandConfig.badgeSuperior || 'Certificación NIC 19'}
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
+            <span className="text-[10px] font-bold text-slate-400 uppercase block">Título Formulario</span>
+            <span className="text-xs font-bold text-slate-900 mt-1 block truncate">
+              {brandConfig.textoBienvenida || 'WELCOME TO'} {brandConfig.tituloFormulario || 'VALUADOR ACTUARIAL'}
+            </span>
+            <span className="text-[10px] text-slate-500 block truncate mt-0.5">
+              Botón: {brandConfig.textoBotonLogin || 'SIGN IN'}
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
+            <span className="text-[10px] font-bold text-slate-400 uppercase block">Título en Dashboard</span>
+            <span className="text-xs font-bold text-slate-900 mt-1 block truncate">
+              {brandConfig.tituloDashboard || 'Valuador Actuarial NIC 19'}
+            </span>
+            <span className="text-[10px] text-slate-500 block truncate mt-0.5">
+              Subtítulo: Código del Trabajo
+            </span>
           </div>
         </div>
       </div>

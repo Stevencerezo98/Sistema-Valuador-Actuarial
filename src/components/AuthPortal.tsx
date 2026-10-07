@@ -264,16 +264,32 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onLoginSuccess }) => {
           {/* Encabezado del Formulario con Monograma */}
           <div className="text-center mb-8">
             <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-400 block mb-2">
-              WELCOME TO
+              {brandConfig.textoBienvenida || 'WELCOME TO'}
             </span>
             <div className="flex items-center justify-center gap-2.5 text-blue-700 dark:text-blue-400">
-              <InfinityIcon className="w-8 h-8" />
+              {brandConfig.tipoLogo === 'imagen' && brandConfig.logoUrlPersonalizado ? (
+                <img 
+                  src={brandConfig.logoUrlPersonalizado} 
+                  alt="Logo" 
+                  className="w-8 h-8 object-contain rounded-md" 
+                />
+              ) : brandConfig.iconoSeleccionado === 'shield' ? (
+                <ShieldCheck className="w-8 h-8" />
+              ) : brandConfig.iconoSeleccionado === 'building' ? (
+                <Building className="w-8 h-8" />
+              ) : brandConfig.iconoSeleccionado === 'award' ? (
+                <Award className="w-8 h-8" />
+              ) : brandConfig.iconoSeleccionado === 'trending' ? (
+                <Layers className="w-8 h-8" />
+              ) : (
+                <InfinityIcon className="w-8 h-8" />
+              )}
               <span className="text-2xl font-black tracking-tight uppercase">
-                VALUADOR ACTUARIAL
+                {brandConfig.tituloFormulario || 'VALUADOR ACTUARIAL'}
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 max-w-xs mx-auto">
-              Portal Institucional de Nómina y Provisiones Laborales Ecuador · NIC 19
+              {brandConfig.subtituloFormulario || 'Portal Institucional de Nómina y Provisiones Laborales Ecuador · NIC 19'}
             </p>
           </div>
 
@@ -287,7 +303,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onLoginSuccess }) => {
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
               }`}
             >
-              Iniciar Sesión
+              {brandConfig.textoTabLogin || 'Iniciar Sesión'}
             </button>
             <button
               onClick={() => { setTab('registro'); setRegistroError(null); }}
@@ -297,7 +313,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onLoginSuccess }) => {
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
               }`}
             >
-              Registrar Empresa
+              {brandConfig.textoTabRegistro || 'Registrar Empresa'}
             </button>
           </div>
 
@@ -357,12 +373,19 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onLoginSuccess }) => {
                 <button
                   type="submit"
                   disabled={loginLoading}
-                  className={`w-full py-3 px-4 rounded-xl ${preset.buttonColor} text-white font-bold text-xs uppercase tracking-wider shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2`}
+                  className={`w-full py-3 px-4 rounded-xl ${
+                    brandConfig.colorBotonFormulario === 'azul' ? 'bg-blue-600 hover:bg-blue-700' :
+                    brandConfig.colorBotonFormulario === 'rojo' ? 'bg-rose-600 hover:bg-rose-700' :
+                    brandConfig.colorBotonFormulario === 'purpura' ? 'bg-[#5b52f9] hover:bg-[#4f46e5]' :
+                    brandConfig.colorBotonFormulario === 'esmeralda' ? 'bg-emerald-600 hover:bg-emerald-700' :
+                    brandConfig.colorBotonFormulario === 'negro' ? 'bg-slate-900 hover:bg-black' :
+                    preset.buttonColor
+                  } text-white font-bold text-xs uppercase tracking-wider shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2`}
                 >
                   {loginLoading ? (
                     <span>Verificando...</span>
                   ) : (
-                    <span>SIGN IN</span>
+                    <span>{brandConfig.textoBotonLogin || 'SIGN IN'}</span>
                   )}
                 </button>
 
@@ -585,17 +608,33 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onLoginSuccess }) => {
           {/* Header Superior del Banner */}
           <div className="relative z-10 flex items-center justify-between">
             <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border ${preset.badgeColor}`}>
-              Certificación Oficial NIC 19
+              {brandConfig.badgeSuperior || 'Certificación Oficial NIC 19'}
             </span>
             <span className="text-xs text-white/80 font-mono">
-              Ecuador 2026
+              {brandConfig.etiquetaSuperiorDerecha || 'Ecuador 2026'}
             </span>
           </div>
 
           {/* Centro: Monograma y Título Grande */}
           <div className="relative z-10 my-10 text-center space-y-4">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl text-white">
-              <InfinityIcon className="w-12 h-12" />
+              {brandConfig.tipoLogo === 'imagen' && brandConfig.logoUrlPersonalizado ? (
+                <img 
+                  src={brandConfig.logoUrlPersonalizado} 
+                  alt="Logo" 
+                  className="w-12 h-12 object-contain" 
+                />
+              ) : brandConfig.iconoSeleccionado === 'shield' ? (
+                <ShieldCheck className="w-12 h-12" />
+              ) : brandConfig.iconoSeleccionado === 'building' ? (
+                <Building className="w-12 h-12" />
+              ) : brandConfig.iconoSeleccionado === 'award' ? (
+                <Award className="w-12 h-12" />
+              ) : brandConfig.iconoSeleccionado === 'trending' ? (
+                <Layers className="w-12 h-12" />
+              ) : (
+                <InfinityIcon className="w-12 h-12" />
+              )}
             </div>
             
             <h2 className="text-3xl font-black tracking-tight text-white uppercase drop-shadow-sm">
@@ -610,16 +649,16 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onLoginSuccess }) => {
           {/* Footer del Banner: Normativa y Puntos Clave */}
           <div className="relative z-10 pt-6 border-t border-white/20 grid grid-cols-3 gap-3 text-center">
             <div className="space-y-1">
-              <div className="text-xs font-bold text-white">Art. 185</div>
-              <div className="text-[10px] text-white/80">Desahucio</div>
+              <div className="text-xs font-bold text-white">{brandConfig.pieCol1Titulo || 'Art. 185'}</div>
+              <div className="text-[10px] text-white/80">{brandConfig.pieCol1Subtitulo || 'Desahucio'}</div>
             </div>
             <div className="space-y-1 border-x border-white/20">
-              <div className="text-xs font-bold text-white">Art. 216</div>
-              <div className="text-[10px] text-white/80">Jubilación</div>
+              <div className="text-xs font-bold text-white">{brandConfig.pieCol2Titulo || 'Art. 216'}</div>
+              <div className="text-[10px] text-white/80">{brandConfig.pieCol2Subtitulo || 'Jubilación'}</div>
             </div>
             <div className="space-y-1">
-              <div className="text-xs font-bold text-white">NIIF / IFRS</div>
-              <div className="text-[10px] text-white/80">PUCM & DBO</div>
+              <div className="text-xs font-bold text-white">{brandConfig.pieCol3Titulo || 'NIIF / IFRS'}</div>
+              <div className="text-[10px] text-white/80">{brandConfig.pieCol3Subtitulo || 'PUCM & DBO'}</div>
             </div>
           </div>
 
