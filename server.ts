@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { exec } from 'child_process';
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import { 
@@ -559,6 +560,25 @@ app.post('/api/v1/mobile/actuarial/calculate', (req: Request, res: Response) => 
       detalles: error.message
     });
   }
+});
+
+// Endpoint para ejecutar el script actuarial en Python directamente en el servidor
+app.get('/api/python/execute', (_req: Request, res: Response) => {
+  const pythonPath = path.resolve(__dirname, 'actuarial_nic19_ecuador.py');
+  exec(`python3 "${pythonPath}"`, (error, stdout, stderr) => {
+    if (error) {
+      return res.status(500).json({
+        success: false,
+        error: error.message,
+        stderr: stderr
+      });
+    }
+    return res.json({
+      success: true,
+      script: 'actuarial_nic19_ecuador.py',
+      output: stdout
+    });
+  });
 });
 
 // Carga de nómina desde la app móvil (con notificación automática por correo al actuario)
