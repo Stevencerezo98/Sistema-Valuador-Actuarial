@@ -89,14 +89,19 @@ export const MortalityTablesView: React.FC = () => {
             aplican las <strong>Tablas de Mortalidad General IESS 2000 publicadas en el Registro Oficial No. 650 del 28 de agosto del 2002</strong>, 
             elaboradas por Logaritmo Cía. Ltda., junto con los coeficientes del <strong>artículo 218 del Código del Trabajo</strong>.
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-blue-200/80 text-[11px]">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-blue-200/80 text-[11px]">
             <div>
               <strong>1. Marco Ministerial:</strong> Acuerdos Ministeriales <em>MDT-2016-0099</em> y <em>MDT-2018-0118</em> disponen 
-              el uso de las tablas del Código del Trabajo basadas en IESS 2000 a una tasa técnica del 4.0%.
+              el uso estricto de las tablas del Código del Trabajo basadas en IESS 2000 a una tasa técnica del 4.0%.
             </div>
             <div>
               <strong>2. Jurisprudencia Obligatoria:</strong> La Corte Nacional de Justicia (Resolución 07-2021) ratificó 
-              el cálculo de la renta constante y límites del salario básico unificado.
+              el cálculo de la renta vitalicia legal y límites del salario básico unificado.
+            </div>
+            <div>
+              <strong>3. Estado Regulatorio Actualizado (2024-2026):</strong> El IESS y el Ministerio del Trabajo 
+              <strong> NO han promulgado nuevas tablas biométricas</strong> para sustituir el RO 650; por tanto, este cuerpo normativo 
+              sigue siendo el <em>único estándar legal exigible</em> en peritajes e informes NIC 19 en Ecuador.
             </div>
           </div>
         </div>

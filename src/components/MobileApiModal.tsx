@@ -680,7 +680,7 @@ curl -X POST "${window.location.origin}/api/v1/mobile/actuarial/calculate" \\
 curl -X POST "${window.location.origin}/api/v1/mobile/payroll/upload" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "nombreEmpresa": "Empresa Evaluada S.A.",
+    "nombreEmpresa": "Corporación Industrial C.A.",
     "ruc": "1792345678001",
     "nombreArchivo": "nomina_movil.xlsx",
     "numRegistros": 50,

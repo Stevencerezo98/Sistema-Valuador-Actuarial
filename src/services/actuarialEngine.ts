@@ -451,7 +451,7 @@ export let METADATOS_EMPRESA_DETECTADOS: MetadatosEmpresaDetectados = {};
  * Escanea de forma exhaustiva todas las hojas y filas de un archivo Excel de la empresa
  * para extraer automáticamente parámetros del estudio y datos institucionales.
  */
-export function extraerParametrosEmpresaDesdeArchivo(archivoBuffer: any): Partial<DatosEmpresaEstudio> {
+export function extraerParametrosEmpresaDesdeArchivo(archivoBuffer: any, nombreArchivo?: string): Partial<DatosEmpresaEstudio> {
   const wb = XLSX.read(archivoBuffer, { type: 'binary', cellDates: true });
   const metadatos: Partial<DatosEmpresaEstudio> = {};
 
@@ -462,6 +462,15 @@ export function extraerParametrosEmpresaDesdeArchivo(archivoBuffer: any): Partia
       .toLowerCase()
       .replace(/[^a-z0-9]/g, "");
 
+  const esEtiquetaGenerica = (str: string) => {
+    const s = cleanStr(str);
+    return s.startsWith('provincia') || s.startsWith('canton') || s.startsWith('ruc') || 
+           s.startsWith('direccion') || s.startsWith('telefono') || s.startsWith('correo') || 
+           s.startsWith('cargo') || s.startsWith('nota') || s.startsWith('casillero') || 
+           s.startsWith('encargado') || s.startsWith('formato') || s.startsWith('personalactivo');
+  };
+
+  // 1. Escanear todas las hojas del libro de trabajo
   for (const sheetName of wb.SheetNames) {
     const ws = wb.Sheets[sheetName];
     const data2D: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
@@ -470,58 +479,236 @@ export function extraerParametrosEmpresaDesdeArchivo(archivoBuffer: any): Partia
     for (let r = 0; r < Math.min(30, data2D.length); r++) {
       const row = data2D[r];
       if (!Array.isArray(row)) continue;
-      for (let c = 0; c < row.length; c++) {
-        const text = cleanStr(row[c]);
-        const val1 = String(row[c + 1] ?? '').trim();
-        const val2 = String(row[c + 2] ?? '').trim();
-        const val = val1 || val2;
 
-        if (text.includes('nombredelaempresa') || text.includes('razonsocial') || (text === 'empresa' && val)) {
-          if (val && !metadatos.nombre_empresa) metadatos.nombre_empresa = val;
+      for (let c = 0; c < row.length; c++) {
+        const rawCell = String(row[c] ?? '').trim();
+        if (!rawCell) continue;
+        const text = cleanStr(rawCell);
+
+        // A. EXTRACCIÓN DE NOMBRE DE EMPRESA / RAZÓN SOCIAL
+        if (!metadatos.nombre_empresa) {
+          // A1: Mismo casillero con etiqueta y valor (ej. "NOMBRE DE LA EMPRESA: ACME S.A." o "EMPRESA: FAVORITA")
+          const matchMismaCelda = rawCell.match(/^(?:NOMBRE\s+(?:DE\s+LA\s+)?EMPRESA|RAZ[OÓ]N\s+SOCIAL|EMPRESA|COMPA[ÑN][IÍ]A|CLIENTE|PATRONO|EMPLEADOR|ENTIDAD)\s*[:=-]\s*(.+)$/i);
+          if (matchMismaCelda && matchMismaCelda[1].trim()) {
+            const candidato = matchMismaCelda[1].trim().replace(/^[:=-]\s*/, '');
+            if (candidato.length >= 2 && !esEtiquetaGenerica(candidato)) {
+              metadatos.nombre_empresa = candidato;
+            }
+          }
+
+          // A2: Celda es solo la etiqueta y el nombre está en columnas siguientes o celdas fusionadas
+          if (!metadatos.nombre_empresa && (
+            text.includes('nombredelaempresa') || 
+            text.includes('razonsocial') || 
+            text === 'empresa' || 
+            text.startsWith('empresa:') ||
+            text.includes('compania') ||
+            text.includes('cliente')
+          )) {
+            // Buscar en las siguientes columnas de la misma fila
+            for (let nextC = c + 1; nextC < Math.min(c + 8, row.length); nextC++) {
+              const nextVal = String(row[nextC] ?? '').trim();
+              if (nextVal && nextVal.length >= 2 && !esEtiquetaGenerica(nextVal)) {
+                metadatos.nombre_empresa = nextVal;
+                break;
+              }
+            }
+            // O si está en la fila inmediatamente inferior
+            if (!metadatos.nombre_empresa && data2D[r + 1]) {
+              const belowVal = String(data2D[r + 1][c] ?? '').trim();
+              if (belowVal && belowVal.length >= 2 && !esEtiquetaGenerica(belowVal)) {
+                metadatos.nombre_empresa = belowVal;
+              }
+            }
+          }
         }
-        if (text.includes('nombrecomercial') || text.includes('marcacomer')) {
-          if (val && !metadatos.nombre_comercial) metadatos.nombre_comercial = val;
+
+        // B. NOMBRE COMERCIAL
+        if (!metadatos.nombre_comercial && (text.includes('nombrecomercial') || text.includes('marcacomer'))) {
+          const matchCom = rawCell.match(/^(?:NOMBRE\s+COMERCIAL|MARCA\s+COMERCIAL)\s*[:=-]\s*(.+)$/i);
+          if (matchCom && matchCom[1].trim()) {
+            metadatos.nombre_comercial = matchCom[1].trim();
+          } else {
+            for (let nextC = c + 1; nextC < Math.min(c + 5, row.length); nextC++) {
+              const val = String(row[nextC] ?? '').trim();
+              if (val && !esEtiquetaGenerica(val)) {
+                metadatos.nombre_comercial = val;
+                break;
+              }
+            }
+          }
         }
-        if (text.includes('ruc') || text.includes('registrounicodecontribuyente')) {
-          const rawDigits = val.replace(/[^0-9]/g, '');
-          if (rawDigits.length >= 10 && !metadatos.ruc) metadatos.ruc = rawDigits;
+
+        // C. RUC (Registro Único de Contribuyente ecuatoriano - 10 a 13 dígitos)
+        if (!metadatos.ruc) {
+          const matchRucMisma = rawCell.match(/(?:RUC|R\.U\.C\.|REGISTRO\s+[UÚ]NICO)\s*[:=-]?\s*([0-9]{10,13})/i);
+          if (matchRucMisma && matchRucMisma[1]) {
+            metadatos.ruc = matchRucMisma[1];
+          } else if (text.includes('ruc') || text.includes('registrounicodecontribuyente')) {
+            for (let nextC = c + 1; nextC < Math.min(c + 6, row.length); nextC++) {
+              const val = String(row[nextC] ?? '').replace(/[^0-9]/g, '');
+              if (val.length >= 10 && val.length <= 13) {
+                metadatos.ruc = val;
+                break;
+              }
+            }
+          }
         }
-        if (text.includes('canton') || text.includes('ciudad') || text.includes('provincia')) {
-          if (val && !metadatos.ciudad) metadatos.ciudad = val;
+
+        // D. PROVINCIA Y CIUDAD / CANTÓN
+        if (text.includes('provincia')) {
+          const matchProv = rawCell.match(/PROVINCIA\s*[:=-]\s*(.+)$/i);
+          const prov = matchProv ? matchProv[1].trim() : String(row[c + 1] ?? '').trim();
+          if (prov && !esEtiquetaGenerica(prov)) metadatos.ciudad = prov;
         }
+        if (text.includes('canton') || text.includes('ciudad')) {
+          const matchCant = rawCell.match(/CANT[OÓ]N\s*[:=-]\s*(.+)$/i);
+          const cant = matchCant ? matchCant[1].trim() : String(row[c + 1] ?? '').trim();
+          if (cant && !esEtiquetaGenerica(cant)) {
+            metadatos.ciudad = metadatos.ciudad ? `${cant}, ${metadatos.ciudad}` : cant;
+          }
+        }
+
+        // E. OBJETO SOCIAL, MISIÓN, VISIÓN
         if (text.includes('objetosocial') || text.includes('actividadeconomica')) {
+          const val = String(row[c + 1] || row[c + 2] || '').trim();
           if (val && !metadatos.objeto_social) metadatos.objeto_social = val;
         }
         if (text.includes('mision')) {
+          const val = String(row[c + 1] || row[c + 2] || '').trim();
           if (val && !metadatos.mision) metadatos.mision = val;
         }
         if (text.includes('vision')) {
+          const val = String(row[c + 1] || row[c + 2] || '').trim();
           if (val && !metadatos.vision) metadatos.vision = val;
         }
+
+        // F. FECHA DE CORTE Y AÑO EVALUADO
         if (text.includes('fechacorte') || text.includes('fechadevaluacion')) {
+          const val = String(row[c + 1] || row[c + 2] || '').trim();
           if (val && !metadatos.fecha_corte_valuacion) metadatos.fecha_corte_valuacion = val;
         }
         if (text.includes('anio') || text.includes('ejercicio')) {
-          const num = parseInt(val, 10);
+          const num = parseInt(String(row[c + 1] || row[c + 2] || ''), 10);
           if (!isNaN(num) && num >= 2000 && num <= 2100 && !metadatos.anio_evaluado) {
             metadatos.anio_evaluado = num;
             metadatos.anio_anterior = num - 1;
           }
         }
+
+        // G. RESERVAS ACUMULADAS PREVIAS (JUBILACIÓN Y DESAHUCIO)
         if ((text.includes('reserva') || text.includes('provision')) && text.includes('jubilacion')) {
-          const num = parseFloat(String(val).replace(/[^0-9.-]/g, ''));
-          if (!isNaN(num) && num > 0) metadatos.provision_anterior_jubilacion = num;
+          for (let k = c + 1; k < Math.min(c + 5, row.length); k++) {
+            const num = parseFloat(String(row[k] ?? '').replace(/[^0-9.-]/g, ''));
+            if (!isNaN(num) && num > 0) {
+              metadatos.provision_anterior_jubilacion = num;
+              break;
+            }
+          }
         }
         if ((text.includes('reserva') || text.includes('provision')) && text.includes('desahucio')) {
-          const num = parseFloat(String(val).replace(/[^0-9.-]/g, ''));
-          if (!isNaN(num) && num > 0) metadatos.provision_anterior_desahucio = num;
+          for (let k = c + 1; k < Math.min(c + 5, row.length); k++) {
+            const num = parseFloat(String(row[k] ?? '').replace(/[^0-9.-]/g, ''));
+            if (!isNaN(num) && num > 0) {
+              metadatos.provision_anterior_desahucio = num;
+              break;
+            }
+          }
         }
+
+        // H. DETECCIÓN DE HIPÓTESIS FINANCIERAS Y ACTUARIALES EN EL ARCHIVO
+        if (text.includes('tasadedescuento') || text.includes('tasadescuento') || text.includes('descuentofinanciero') || text.includes('discountrate')) {
+          for (let k = c + 1; k < Math.min(c + 5, row.length); k++) {
+            const rawVal = String(row[k] ?? '').replace('%', '').trim().replace(',', '.');
+            const num = parseFloat(rawVal);
+            if (!isNaN(num) && num > 0) {
+              const iVal = num > 1 ? num / 100 : num;
+              if (iVal >= 0.01 && iVal <= 0.25) {
+                if (!METADATOS_VARIABLES_DETECTADAS) METADATOS_VARIABLES_DETECTADAS = {};
+                METADATOS_VARIABLES_DETECTADAS.tasa_descuento = iVal;
+                break;
+              }
+            }
+          }
+        }
+        if (text.includes('incrementosalarial') || text.includes('aumentosalarial') || text.includes('tasasalarial') || text.includes('crecimientosalarial')) {
+          for (let k = c + 1; k < Math.min(c + 5, row.length); k++) {
+            const rawVal = String(row[k] ?? '').replace('%', '').trim().replace(',', '.');
+            const num = parseFloat(rawVal);
+            if (!isNaN(num) && num >= 0) {
+              const sVal = num > 1 ? num / 100 : num;
+              if (sVal >= 0 && sVal <= 0.20) {
+                if (!METADATOS_VARIABLES_DETECTADAS) METADATOS_VARIABLES_DETECTADAS = {};
+                METADATOS_VARIABLES_DETECTADAS.tasa_incremento_sal = sVal;
+                break;
+              }
+            }
+          }
+        }
+        if (text.includes('tasaderotacion') || text.includes('tasarotacion') || text.includes('rotaciondepersonal') || text.includes('turnover')) {
+          for (let k = c + 1; k < Math.min(c + 5, row.length); k++) {
+            const rawVal = String(row[k] ?? '').replace('%', '').trim().replace(',', '.');
+            const num = parseFloat(rawVal);
+            if (!isNaN(num) && num >= 0) {
+              const rVal = num > 1 ? num / 100 : num;
+              if (rVal >= 0 && rVal <= 0.35) {
+                if (!METADATOS_VARIABLES_DETECTADAS) METADATOS_VARIABLES_DETECTADAS = {};
+                METADATOS_VARIABLES_DETECTADAS.tasa_rotacion = rVal;
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Si todavía no se identificó el nombre de la empresa, escanear filas iniciales por sufijos societarios
+    if (!metadatos.nombre_empresa) {
+      for (let r = 0; r < Math.min(6, data2D.length); r++) {
+        const row = data2D[r];
+        if (!Array.isArray(row)) continue;
+        for (let c = 0; c < Math.min(5, row.length); c++) {
+          const str = String(row[c] ?? '').trim();
+          if (str.length >= 4 && str.length <= 90) {
+            // Verificar si contiene identificador empresarial
+            const tieneSufijoEmpresarial = /\b(S\.?A\.?|C\.?A\.?|CIA\.?\s+LTDA\.?|LTDA\.?|S\.?A\.?S\.?|E\.?P\.?|CORP|CORPORACI[OÓ]N|CONSORCIO|GRUPO|INDUSTRIAS|IMPORTADORA|DISTRIBUIDORA|COOPERATIVA|ASOCIACI[OÓ]N|CLINICA|HOSPITAL)\b/i.test(str);
+            const esCabeceraGenerica = /(formato|estudio\s+actuarial|valuaci[oó]n|provisi[oó]n|personal\s+activo|tabla\s+de|rol\s+de\s+pagos|n[oó]mina)/i.test(str);
+            if (tieneSufijoEmpresarial && !esCabeceraGenerica) {
+              metadatos.nombre_empresa = str;
+              break;
+            }
+          }
+        }
+        if (metadatos.nombre_empresa) break;
       }
     }
   }
 
+  // 3. Fallback inteligente: Extraer nombre de la empresa desde el nombre del archivo si no vino en celdas
+  if (!metadatos.nombre_empresa && nombreArchivo) {
+    const nombreLimpio = nombreArchivo
+      .replace(/\.(xlsx|xls|csv)$/i, '')
+      .replace(/[-_]/g, ' ')
+      .replace(/\b(nomina|censo|personal|empleados|colaboradores|estudio|actuarial|formato|informacion|plantilla|reporte|ecuador|iess|nic19|niif|2020|2021|2022|2023|2024|2025|2026|v1|v2|final|copia|oficial)\b/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (nombreLimpio.length >= 3) {
+      metadatos.nombre_empresa = nombreLimpio
+        .split(' ')
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ');
+    }
+  }
+
+  if (metadatos.nombre_empresa && !metadatos.nombre_comercial) {
+    metadatos.nombre_comercial = metadatos.nombre_empresa;
+  }
+
   return metadatos;
 }
+
+export let METADATOS_VARIABLES_DETECTADAS: Partial<VariablesMacro> | null = null;
 
 /**
  * Lector flexible de archivos Excel (.xlsx, .xls) y CSV con soporte exacto para:
@@ -531,13 +718,58 @@ export function extraerParametrosEmpresaDesdeArchivo(archivoBuffer: any): Partia
  * 4. Cálculo de Antigüedad a partir de FECHA DE ENTRADA y SALIDA
  * 5. Determinación precisa del Sueldo_Actual a partir de la columna TOTAL (casillero 3)
  */
-export function leerArchivoNomina(archivoBuffer: any): EmpleadoInput[] {
-  const wb = XLSX.read(archivoBuffer, { type: 'binary', cellDates: true });
-  const primerHoja = wb.SheetNames[0];
-  const ws = wb.Sheets[primerHoja];
+export function leerArchivoNomina(archivoBuffer: any, nombreArchivo?: string): EmpleadoInput[] {
+  METADATOS_VARIABLES_DETECTADAS = null;
+  // Extraer automáticamente todos los metadatos institucionales y parámetros de la empresa
+  METADATOS_EMPRESA_DETECTADOS = extraerParametrosEmpresaDesdeArchivo(archivoBuffer, nombreArchivo);
 
-  // Extraer como matriz 2D para escanear cabeceras institucionales y títulos
-  const data2D: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+  const wb = XLSX.read(archivoBuffer, { type: 'binary', cellDates: true });
+
+  const cleanStrLocal = (s: any) => 
+    String(s ?? '')
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+
+  // Buscar inteligentemente la mejor hoja que contenga el censo de empleados
+  let mejorHoja = wb.SheetNames[0];
+  let mejorPuntajeHoja = -1;
+  let mejorData2D: any[][] = [];
+
+  for (const sheetName of wb.SheetNames) {
+    const wsCurr = wb.Sheets[sheetName];
+    if (!wsCurr) continue;
+    const curr2D: any[][] = XLSX.utils.sheet_to_json(wsCurr, { header: 1, defval: '' });
+    if (!curr2D || curr2D.length === 0) continue;
+
+    let sheetScore = 0;
+    const sNameClean = cleanStrLocal(sheetName);
+    if (sNameClean.includes('censo') || sNameClean.includes('nomina') || sNameClean.includes('empleado') || sNameClean.includes('personal') || sNameClean.includes('datos')) {
+      sheetScore += 10;
+    }
+
+    for (let r = 0; r < Math.min(25, curr2D.length); r++) {
+      const row = curr2D[r];
+      if (!Array.isArray(row)) continue;
+      row.forEach(cell => {
+        const c = cleanStrLocal(cell);
+        if (c.includes('cedula') || c.includes('identif') || c.includes('dni')) sheetScore += 4;
+        if (c.includes('nombre') || c.includes('apellido') || c.includes('colaborador')) sheetScore += 4;
+        if (c.includes('sexo') || c.includes('genero')) sheetScore += 4;
+        if (c.includes('sueldo') || c.includes('salario') || c.includes('remunera') || c.includes('total')) sheetScore += 3;
+      });
+    }
+
+    if (sheetScore > mejorPuntajeHoja) {
+      mejorPuntajeHoja = sheetScore;
+      mejorHoja = sheetName;
+      mejorData2D = curr2D;
+    }
+  }
+
+  // Extraer matriz 2D de la mejor hoja detectada
+  const data2D: any[][] = mejorData2D.length > 0 ? mejorData2D : XLSX.utils.sheet_to_json(wb.Sheets[mejorHoja], { header: 1, defval: '' });
 
   if (!data2D || data2D.length === 0) {
     throw new Error('El archivo no contiene filas de datos en su primera hoja.');
@@ -549,40 +781,6 @@ export function leerArchivoNomina(archivoBuffer: any): EmpleadoInput[] {
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
       .replace(/[^a-z0-9]/g, "");
-
-  // Extraer metadatos de empresa de las primeras filas si existen
-  METADATOS_EMPRESA_DETECTADOS = {};
-  for (let r = 0; r < Math.min(10, data2D.length); r++) {
-    const row = data2D[r];
-    if (!Array.isArray(row)) continue;
-    for (let c = 0; c < row.length; c++) {
-      const cellText = cleanStr(row[c]);
-      if (cellText.includes('nombredelaempresa') || cellText.includes('razonsocial')) {
-        const val = String(row[c + 1] || row[c + 2] || '').trim();
-        if (val) METADATOS_EMPRESA_DETECTADOS.nombre_empresa = val;
-      }
-      if (cellText.includes('ruc') || cellText.includes('registrounicodecontribuyente')) {
-        const val = String(row[c + 1] || row[c + 2] || '').trim();
-        if (val) METADATOS_EMPRESA_DETECTADOS.ruc = val;
-      }
-      if (cellText.includes('direccion')) {
-        const val = String(row[c + 1] || row[c + 2] || '').trim();
-        if (val) METADATOS_EMPRESA_DETECTADOS.direccion = val;
-      }
-      if (cellText.includes('encargado')) {
-        const val = String(row[c + 1] || row[c + 2] || '').trim();
-        if (val) METADATOS_EMPRESA_DETECTADOS.encargado = val;
-      }
-      if (cellText.includes('provincia')) {
-        const val = String(row[c + 1] || '').trim();
-        if (val) METADATOS_EMPRESA_DETECTADOS.provincia = val;
-      }
-      if (cellText.includes('canton')) {
-        const val = String(row[c + 1] || '').trim();
-        if (val) METADATOS_EMPRESA_DETECTADOS.canton = val;
-      }
-    }
-  }
 
   // 1. Detectar en qué fila se encuentran los encabezados reales de la tabla de empleados
   let headerRowIdx = 0;
@@ -713,7 +911,8 @@ export function leerArchivoNomina(archivoBuffer: any): EmpleadoInput[] {
     return val === 'H' || val === 'HOMBRE';
   });
 
-  const fechaCorte = new Date(2023, 11, 31); // 31 de diciembre de 2023 por defecto
+  const anioCorte = METADATOS_EMPRESA_DETECTADOS?.anio_evaluado || (new Date()).getFullYear();
+  const fechaCorte = new Date(anioCorte, 11, 31);
 
   // 4. Transformar filas de la nómina
   return filasDatos.map((r, idx) => {

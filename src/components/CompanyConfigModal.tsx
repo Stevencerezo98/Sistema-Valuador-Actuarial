@@ -145,7 +145,7 @@ export const CompanyConfigModal: React.FC<CompanyConfigModalProps> = ({
                 Parámetros del Estudio Actuarial y Empresa
               </h3>
               <p className="text-xs text-gray-500">
-                Datos institucionales de la empresa evaluada y parámetros técnicos para informes Word (.docx) y PDF.
+                Datos institucionales de la empresa y parámetros técnicos para informes Word (.docx) y PDF.
               </p>
             </div>
           </div>

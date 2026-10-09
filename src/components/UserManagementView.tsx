@@ -113,7 +113,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
   const [nuevoPassword, setNuevoPassword] = useState('Empresa123*');
   const [nuevoPin, setNuevoPin] = useState('1234');
   const [nuevoRol, setNuevoRol] = useState<RolUsuario>('cliente');
-  const [nuevaEmpresa, setNuevaEmpresa] = useState(empresa.nombre_empresa || 'Empresa Evaluada');
+  const [nuevaEmpresa, setNuevaEmpresa] = useState(empresa.nombre_empresa || '');
   const [formError, setFormError] = useState<string | null>(null);
 
   // Modal para restablecer PIN
@@ -1398,7 +1398,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                     type="text"
                     value={nuevaEmpresa}
                     onChange={e => setNuevaEmpresa(e.target.value)}
-                    placeholder="Empresa Evaluada S.A."
+                    placeholder="Razón Social o Nombre de la Empresa"
                     className="w-full p-2.5 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 bg-white"
                   />
                 </div>

@@ -33,7 +33,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   const processBuffer = (buffer: any, fileName?: string) => {
     try {
       setErrorMsg(null);
-      const rows = leerArchivoNomina(buffer);
+      const rows = leerArchivoNomina(buffer, fileName);
       if (rows.length === 0) {
         setErrorMsg('El archivo no contiene filas válidas.');
         return;

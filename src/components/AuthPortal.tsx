@@ -203,7 +203,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onLoginSuccess }) => {
           <div 
             className="absolute inset-0 transition-all duration-500"
             style={{ 
-              background: currentGradient,
+              backgroundImage: currentGradient,
               opacity: (brandConfig.tipoFondo === 'imagen' && bgImagenUrl) ? 0.35 : 1
             }}
           />
@@ -591,7 +591,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onLoginSuccess }) => {
         {/* PANEL DERECHO: BRANDING CORPORATIVO INSTITUCIONAL (Estilo login.jpg) */}
         <div 
           className="lg:col-span-6 text-white p-8 sm:p-12 flex flex-col justify-between relative overflow-hidden transition-all duration-300"
-          style={{ background: currentGradient }}
+          style={{ backgroundImage: currentGradient }}
         >
           {/* Fotografía / Textura de fondo configurada por el Administrador */}
           {bgImagenUrl && (

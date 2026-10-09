@@ -148,10 +148,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Info Card de la Empresa Activa */}
         <div className="px-4 py-3 bg-slate-900/60 border-b border-slate-800/70">
           <div className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">
-            Empresa Evaluada
+            Razón Social / Empresa
           </div>
-          <div className="text-xs font-semibold text-white truncate mt-0.5" title={nombreEmpresa}>
-            {nombreEmpresa}
+          <div className="text-xs font-semibold text-white truncate mt-0.5" title={nombreEmpresa || 'Pendiente de cargar nómina'}>
+            {nombreEmpresa || 'Empresa en Valuación'}
           </div>
           <div className="mt-1.5 flex items-center gap-1.5 text-[10px]">
             <span className={`px-2 py-0.5 rounded-md font-medium ${

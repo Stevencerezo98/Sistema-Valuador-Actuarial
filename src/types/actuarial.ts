@@ -224,9 +224,9 @@ export interface DatosEmpresaEstudio {
 }
 
 export const DEFAULT_DATOS_EMPRESA: DatosEmpresaEstudio = {
-  nombre_empresa: 'EMPRESA EVALUADA S.A.',
-  nombre_comercial: 'EMPRESA EVALUADA',
-  ruc: '1790000000001',
+  nombre_empresa: 'Empresa en Valuación Actuarial',
+  nombre_comercial: 'Empresa en Valuación',
+  ruc: '',
   ciudad: 'Quito, Ecuador',
   fecha_constitucion: '10 de enero de 2015',
   plazo_duracion: 'Plazo Indefinido',

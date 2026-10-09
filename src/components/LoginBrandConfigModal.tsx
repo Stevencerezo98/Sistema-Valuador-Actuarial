@@ -250,12 +250,12 @@ export const LoginBrandConfigModal: React.FC<LoginBrandConfigModalProps> = ({
             <div 
               className="w-full rounded-2xl overflow-hidden border border-slate-300 dark:border-slate-700 relative p-4 flex items-center justify-center transition-all min-h-[190px]"
               style={{
-                background: currentGradient,
                 backgroundImage: imagenActual && (config.tipoFondo === 'imagen' || config.tipoFondo === 'ambos')
-                  ? `url(${imagenActual})`
-                  : undefined,
+                  ? (config.tipoFondo === 'ambos' ? `${currentGradient}, url(${imagenActual})` : `url(${imagenActual})`)
+                  : currentGradient,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
                 backgroundBlendMode: config.tipoFondo === 'ambos' ? 'overlay' : 'normal'
               }}
             >
@@ -298,7 +298,7 @@ export const LoginBrandConfigModal: React.FC<LoginBrandConfigModalProps> = ({
                 {/* Panel Derecho Simulado */}
                 <div 
                   className="col-span-6 rounded-xl p-2.5 text-center space-y-1.5 relative overflow-hidden text-white"
-                  style={{ background: currentGradient }}
+                  style={{ backgroundImage: currentGradient }}
                 >
                   <div className="flex items-center justify-between text-[7px] text-white/80">
                     <span className="bg-white/20 px-1 py-0.2 rounded font-bold">{config.badgeSuperior || 'Certificación Oficial'}</span>
@@ -411,7 +411,7 @@ export const LoginBrandConfigModal: React.FC<LoginBrandConfigModalProps> = ({
                           <div className="flex items-center gap-2.5 min-w-0">
                             <div 
                               className="w-9 h-9 rounded-xl shadow-xs shrink-0 border border-black/10" 
-                              style={{ background: item.cssGradient }} 
+                              style={{ backgroundImage: item.cssGradient }} 
                             />
                             <div className="min-w-0">
                               <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block truncate">

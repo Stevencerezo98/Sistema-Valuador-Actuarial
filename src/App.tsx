@@ -18,7 +18,7 @@ import { ActuarialStudiesView } from './components/ActuarialStudiesView';
 import { ClientConfirmationView } from './components/ClientConfirmationView';
 import { MobileApiModal } from './components/MobileApiModal';
 import { LoginBrandConfigModal } from './components/LoginBrandConfigModal';
-import { FinnovaActuaryDashboard } from './components/FinnovaActuaryDashboard';
+import { ExecutiveActuaryDashboard } from './components/ExecutiveActuaryDashboard';
 import { getInitialTheme, applyTheme, ThemeMode } from './services/themeService';
 import { enviarNotificacionCorreoActuario } from './services/notificationService';
 
@@ -37,6 +37,7 @@ import {
   procesarMotorActuarial, 
   calcularSensibilidadNIIF, 
   METADATOS_EMPRESA_DETECTADOS,
+  METADATOS_VARIABLES_DETECTADAS,
   exportarResultadosAExcel 
 } from './services/actuarialEngine';
 import { generarEstudioWord } from './services/wordReportGenerator';
@@ -136,7 +137,14 @@ export default function App() {
   const [empresa, setEmpresa] = useState<DatosEmpresaEstudio>(() => {
     try {
       const saved = localStorage.getItem('PARAMETROS_EMPRESA_ACTUARIAL');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.nombre_empresa === 'EMPRESA EVALUADA S.A.' || parsed.nombre_empresa === 'EMPRESA EVALUADA') {
+          parsed.nombre_empresa = '';
+          parsed.nombre_comercial = '';
+        }
+        return parsed;
+      }
     } catch (e) {}
     return DEFAULT_DATOS_EMPRESA;
   });
@@ -144,12 +152,19 @@ export default function App() {
   // Sincronizar datos de empresa con el usuario logueado si es cliente
   useEffect(() => {
     if (usuarioActivo && usuarioActivo.rol === 'cliente') {
-      setEmpresa(prev => ({
-        ...prev,
-        nombre_empresa: usuarioActivo.razonSocial || usuarioActivo.empresa || prev.nombre_empresa,
-        ruc: usuarioActivo.ruc || prev.ruc
-      }));
-      setUltimaEntregaCliente(obtenerUltimaEntregaEmpresa(usuarioActivo.ruc, usuarioActivo.empresa || usuarioActivo.razonSocial));
+      const empresaUsuario = (usuarioActivo.razonSocial && !usuarioActivo.razonSocial.includes('Empresa Evaluada'))
+        ? usuarioActivo.razonSocial
+        : (usuarioActivo.empresa && !usuarioActivo.empresa.includes('Empresa Evaluada') ? usuarioActivo.empresa : '');
+
+      if (empresaUsuario) {
+        setEmpresa(prev => ({
+          ...prev,
+          nombre_empresa: empresaUsuario,
+          nombre_comercial: empresaUsuario,
+          ruc: usuarioActivo.ruc || prev.ruc
+        }));
+      }
+      setUltimaEntregaCliente(obtenerUltimaEntregaEmpresa(usuarioActivo.ruc, empresaUsuario || usuarioActivo.empresa || usuarioActivo.razonSocial));
     }
   }, [usuarioActivo]);
 
@@ -165,14 +180,53 @@ export default function App() {
 
   // Manejo de carga de datos según el rol
   const handleLoadData = (newData: EmpleadoInput[], fileName?: string) => {
-    // REGLA CRÍTICA PARA EL CLIENTE:
-    // Al cliente NO tiene que salirle nada del estudio, valuación o descarga.
-    // Solo debe registrarse la entrega y mostrar el agradecimiento + botón de notificación.
+    const meta = METADATOS_EMPRESA_DETECTADOS;
+    const nombreDetectado = meta.nombre_empresa?.trim() || '';
+
+    // REGLA PARA EL CLIENTE:
+    // Al cliente se le registra la entrega, se extrae el nombre de su empresa del archivo y se notifica al actuario
     if (rolActual === 'cliente') {
       const nomArchivo = fileName || 'nomina_empresa.xlsx';
+      
+      const finalNombreEmpresa = nombreDetectado 
+        || (usuarioActivo?.razonSocial && !usuarioActivo.razonSocial.includes('Empresa Evaluada') ? usuarioActivo.razonSocial : '')
+        || (usuarioActivo?.empresa && !usuarioActivo.empresa.includes('Empresa Evaluada') ? usuarioActivo.empresa : '')
+        || (empresa.nombre_empresa && !empresa.nombre_empresa.includes('Empresa Evaluada') ? empresa.nombre_empresa : '')
+        || 'Empresa Cliente';
+
+      const finalRuc = meta.ruc || usuarioActivo?.ruc || empresa.ruc || '1790000000001';
+
+      // Actualizar datos de empresa en sesión
+      setEmpresa(prev => {
+        const updated: DatosEmpresaEstudio = {
+          ...prev,
+          nombre_empresa: finalNombreEmpresa,
+          nombre_comercial: meta.nombre_comercial || finalNombreEmpresa,
+          ruc: finalRuc,
+          ciudad: meta.canton ? `${meta.canton}, ${meta.provincia || 'Ecuador'}` : (meta.ciudad || prev.ciudad),
+          objeto_social: meta.objeto_social || prev.objeto_social,
+          fecha_corte_valuacion: meta.fecha_corte_valuacion || prev.fecha_corte_valuacion,
+          anio_evaluado: meta.anio_evaluado || prev.anio_evaluado,
+          anio_anterior: meta.anio_evaluado ? meta.anio_evaluado - 1 : prev.anio_anterior,
+          provision_anterior_jubilacion: meta.provision_anterior_jubilacion || prev.provision_anterior_jubilacion,
+          provision_anterior_desahucio: meta.provision_anterior_desahucio || prev.provision_anterior_desahucio,
+        };
+        try {
+          localStorage.setItem('PARAMETROS_EMPRESA_ACTUARIAL', JSON.stringify(updated));
+        } catch (e) {}
+        return updated;
+      });
+
+      // Actualizar datos del usuario cliente activo si aplica
+      if (usuarioActivo && (!usuarioActivo.razonSocial || usuarioActivo.razonSocial.includes('Empresa Evaluada'))) {
+        usuarioActivo.razonSocial = finalNombreEmpresa;
+        usuarioActivo.empresa = finalNombreEmpresa;
+        if (finalRuc) usuarioActivo.ruc = finalRuc;
+      }
+
       const entrega = registrarEntregaNomina({
-        rucEmpresa: usuarioActivo?.ruc || empresa.ruc || '1790000000001',
-        nombreEmpresa: usuarioActivo?.razonSocial || usuarioActivo?.empresa || empresa.nombre_empresa || 'Empresa',
+        rucEmpresa: finalRuc,
+        nombreEmpresa: finalNombreEmpresa,
         usuarioId: usuarioActivo?.id || 'usr-cli',
         usuarioNombre: usuarioActivo?.nombre || 'Representante Empresa',
         nombreArchivo: nomArchivo,
@@ -196,32 +250,41 @@ export default function App() {
       return;
     }
 
-    // Para el actuario o administrador:
+    // Para el ACTUARIO o ADMINISTRADOR:
     // Carga de nómina al motor para cálculo completo
     setCensusInput(newData);
-    // Autollenar parámetros de la empresa si fueron detectados en el archivo
-    const meta = METADATOS_EMPRESA_DETECTADOS;
-    if (meta.nombre_empresa || meta.ruc || meta.canton || meta.ciudad) {
-      setEmpresa(prev => {
-        const updated: DatosEmpresaEstudio = {
-          ...prev,
-          nombre_empresa: meta.nombre_empresa || prev.nombre_empresa,
-          nombre_comercial: meta.nombre_comercial || prev.nombre_comercial,
-          ruc: meta.ruc || prev.ruc,
-          ciudad: meta.canton ? `${meta.canton}, ${meta.provincia || 'Ecuador'}` : (meta.ciudad || prev.ciudad),
-          objeto_social: meta.objeto_social || prev.objeto_social,
-          fecha_corte_valuacion: meta.fecha_corte_valuacion || prev.fecha_corte_valuacion,
-          anio_evaluado: meta.anio_evaluado || prev.anio_evaluado,
-          anio_anterior: meta.anio_evaluado ? meta.anio_evaluado - 1 : prev.anio_anterior,
-          provision_anterior_jubilacion: meta.provision_anterior_jubilacion || prev.provision_anterior_jubilacion,
-          provision_anterior_desahucio: meta.provision_anterior_desahucio || prev.provision_anterior_desahucio,
-        };
-        try {
-          localStorage.setItem('PARAMETROS_EMPRESA_ACTUARIAL', JSON.stringify(updated));
-        } catch (e) {}
-        return updated;
-      });
+
+    const finalNombreActuario = nombreDetectado || empresa.nombre_empresa || '';
+
+    // Autollenar y actualizar parámetros de la empresa si fueron detectados en el archivo
+    setEmpresa(prev => {
+      const updated: DatosEmpresaEstudio = {
+        ...prev,
+        nombre_empresa: finalNombreActuario || prev.nombre_empresa,
+        nombre_comercial: meta.nombre_comercial || finalNombreActuario || prev.nombre_comercial,
+        ruc: meta.ruc || prev.ruc,
+        ciudad: meta.canton ? `${meta.canton}, ${meta.provincia || 'Ecuador'}` : (meta.ciudad || prev.ciudad),
+        objeto_social: meta.objeto_social || prev.objeto_social,
+        fecha_corte_valuacion: meta.fecha_corte_valuacion || prev.fecha_corte_valuacion,
+        anio_evaluado: meta.anio_evaluado || prev.anio_evaluado,
+        anio_anterior: meta.anio_evaluado ? meta.anio_evaluado - 1 : prev.anio_anterior,
+        provision_anterior_jubilacion: meta.provision_anterior_jubilacion || prev.provision_anterior_jubilacion,
+        provision_anterior_desahucio: meta.provision_anterior_desahucio || prev.provision_anterior_desahucio,
+      };
+      try {
+        localStorage.setItem('PARAMETROS_EMPRESA_ACTUARIAL', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+
+    // Si se detectaron hipótesis actuariales en el archivo Excel, sincronizarlas
+    if (METADATOS_VARIABLES_DETECTADAS) {
+      setVariables(prev => ({
+        ...prev,
+        ...METADATOS_VARIABLES_DETECTADAS
+      }));
     }
+
     setActiveTab('dashboard');
   };
 
@@ -383,8 +446,8 @@ export default function App() {
                 />
               )
             ) : (
-              // VISTA PARA ACTUARIO / ADMINISTRADOR (Dashboard Ejecutivo Moderno Estilo Finnova)
-              <FinnovaActuaryDashboard
+              // VISTA PARA ACTUARIO / ADMINISTRADOR (Dashboard Ejecutivo de Valuación Actuarial)
+              <ExecutiveActuaryDashboard
                 resultados={resultados}
                 resumen={resumen}
                 variables={variables}
@@ -396,7 +459,9 @@ export default function App() {
                 onExportExcel={() => exportarResultadosAExcel(resultados, resumen, variables, sensibilidad)}
                 onOpenLoginBrandConfig={() => setIsLoginBrandOpen(true)}
                 onOpenCompanyConfig={() => setIsCompanyConfigOpen(true)}
+                onOpenVariables={() => setIsVariablesOpen(true)}
                 onLimpiarDatos={handleClearData}
+                onNavigateTab={(tab) => setActiveTab(tab)}
                 theme={theme}
               />
             )
@@ -493,6 +558,8 @@ export default function App() {
         onClose={() => setIsVariablesOpen(false)}
         variables={variables}
         onChangeVariables={setVariables}
+        resumen={resumen}
+        empresa={empresa}
       />
 
       <CompanyConfigModal

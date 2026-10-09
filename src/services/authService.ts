@@ -194,7 +194,7 @@ const USUARIOS_INICIALES: InfoUsuario[] = [
     password: 'Empresa123*',
     pin: '1234',
     rol: 'cliente',
-    empresaAsignada: 'Empresa Evaluada S.A.',
+    empresaAsignada: 'Empresa Cliente',
     estado: 'activo',
     fechaCreacion: '10/02/2025'
   }
@@ -205,7 +205,16 @@ export function obtenerUsuarios(): InfoUsuario[] {
     const raw = localStorage.getItem(STORAGE_USERS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // Limpiar remanentes de 'Empresa Evaluada'
+        const saneados = parsed.map((u: InfoUsuario) => {
+          if (u.empresaAsignada === 'Empresa Evaluada S.A.' || u.empresaAsignada === 'Empresa Evaluada') {
+            return { ...u, empresaAsignada: 'Empresa Cliente' };
+          }
+          return u;
+        });
+        return saneados;
+      }
     }
   } catch (e) {
     console.error('Error al cargar usuarios:', e);

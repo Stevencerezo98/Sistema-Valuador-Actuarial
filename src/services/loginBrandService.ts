@@ -28,7 +28,7 @@ export interface LoginBrandConfig {
 
   // --- Fondo & Estilo Visual ---
   tipoFondo: 'degradado' | 'imagen' | 'ambos';
-  estiloDegradado: 'rojo_infinity' | 'azul_corporativo' | 'purpura_finnova' | 'esmeralda_financiero' | 'oscuro_minimalista' | 'borgona_oro' | 'personalizado';
+  estiloDegradado: 'rojo_infinity' | 'azul_corporativo' | 'purpura_indigo' | 'esmeralda_financiero' | 'oscuro_minimalista' | 'borgona_oro' | 'personalizado';
   colorInicioPersonalizado?: string;
   colorFinPersonalizado?: string;
   estiloImagen: 'ciudad_nocturna' | 'rascacielos' | 'arquitectura_cristal' | 'geometrico' | 'sala_directorio' | 'abstracto_financiero' | 'degradado_puro' | 'personalizada';
@@ -69,8 +69,8 @@ export const DEGRADADOS_PRESETS: Record<string, {
     accentColor: '#2563eb',
     previewColors: ['#0a192f', '#0284c7']
   },
-  purpura_finnova: {
-    nombre: 'Púrpura Finnova / Royal Indigo Ejecutivo',
+  purpura_indigo: {
+    nombre: 'Púrpura Imperial & Royal Indigo Ejecutivo',
     cssGradient: 'linear-gradient(135deg, #181928 0%, #312e81 40%, #4f46e5 80%, #6366f1 100%)',
     badgeColor: 'bg-indigo-500/20 text-indigo-200 border-indigo-400/30',
     buttonColor: 'bg-[#5b52f9] hover:bg-[#4f46e5]',
@@ -190,12 +190,20 @@ export function obtenerLoginBrandConfig(): LoginBrandConfig {
   try {
     const raw = localStorage.getItem(STORAGE_LOGIN_BRAND_KEY);
     if (raw) {
-      return { ...DEFAULT_LOGIN_BRAND_CONFIG, ...JSON.parse(raw) };
+      const parsed = JSON.parse(raw);
+      if (parsed.estiloDegradado === 'purpura_finnova') {
+        parsed.estiloDegradado = 'purpura_indigo';
+      }
+      return { ...DEFAULT_LOGIN_BRAND_CONFIG, ...parsed };
     }
     // Fallback retrocompatible con V1 si existía
     const rawV1 = localStorage.getItem('SISTEMA_ACTUARIAL_LOGIN_BRAND_CONFIG_V1');
     if (rawV1) {
-      return { ...DEFAULT_LOGIN_BRAND_CONFIG, ...JSON.parse(rawV1) };
+      const parsedV1 = JSON.parse(rawV1);
+      if (parsedV1.estiloDegradado === 'purpura_finnova') {
+        parsedV1.estiloDegradado = 'purpura_indigo';
+      }
+      return { ...DEFAULT_LOGIN_BRAND_CONFIG, ...parsedV1 };
     }
   } catch (e) {
     console.error('Error al obtener configuración de marca login:', e);
